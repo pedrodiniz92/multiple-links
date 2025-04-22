@@ -15,6 +15,9 @@ const inputSection = document.querySelector('.input-section');
 const newLinksButton = document.getElementById('new-links-button');
 const editShareContainer = document.querySelector('.edit-share-container');
 
+// Rich text editor
+let quill;
+
 // Cache object to store video titles
 const videoTitleCache = {};
 
@@ -67,7 +70,12 @@ async function parseUrlParams() {
         // Clear any existing links when loading from URL
         linksContainer.innerHTML = '';
         
-        urlInput.value = decodeURIComponent(urls);
+        const decodedContent = decodeURIComponent(urls);
+        urlInput.value = decodedContent;
+        
+        // Update the rich text editor with the content
+        setQuillContent(decodedContent);
+        
         await processLinks();
         toggleInputSection(false); // Hide input after processing links
     }
@@ -97,14 +105,18 @@ function resetCardCounter() {
 
 // Function to parse link with title in [Title]Link format
 function parseLinkWithTitle(input) {
+    // First, fix any HTML entity conversions in URLs
+    // This will convert &amp; back to & for URL parameters
+    const fixedInput = fixHtmlEntitiesInUrls(input);
+    
     // Check if the input starts with a square bracket
-    if (input.startsWith('[')) {
+    if (fixedInput.startsWith('[')) {
         // Find the closing bracket
-        const closingBracketIndex = input.indexOf(']');
+        const closingBracketIndex = fixedInput.indexOf(']');
         if (closingBracketIndex !== -1) {
             // Extract the title and the link
-            const customTitle = input.substring(1, closingBracketIndex);
-            const actualLink = input.substring(closingBracketIndex + 1).trim();
+            const customTitle = fixedInput.substring(1, closingBracketIndex);
+            const actualLink = fixedInput.substring(closingBracketIndex + 1).trim();
             
             return {
                 hasCustomTitle: true,
@@ -119,15 +131,43 @@ function parseLinkWithTitle(input) {
     return {
         hasCustomTitle: false,
         customTitle: null,
-        link: input,
+        link: fixedInput,
         skipTitle: false
     };
 }
 
+// Helper function to fix HTML entities in URLs
+function fixHtmlEntitiesInUrls(text) {
+    // Look for URL patterns and fix any HTML entities within them
+    let fixedText = text;
+    
+    // Define a regex to match URLs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    
+    // Replace any &amp; with & in the URLs
+    fixedText = fixedText.replace(urlRegex, (match) => {
+        return match
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+    });
+    
+    return fixedText;
+}
+
 // Function to check if input is a valid URL
 function isValidUrl(string) {
+    // Remove any formatting HTML tags before checking URL validity
+    // This helps when users paste formatted URLs
+    let cleanString = string;
+    
+    // Remove common HTML formatting tags
+    cleanString = cleanString.replace(/<\/?[^>]+(>|$)/g, "");
+    
     try {
-        new URL(string);
+        new URL(cleanString);
         return true;
     } catch (_) {
         return false;
@@ -148,9 +188,17 @@ function createTextCard(text) {
         const headerText = text.trim().substring(1).trim();
         card.textContent = headerText;
     } else {
-        // Create a regular text card
+        // Create a regular text card with rich text support
         card.className = 'text-card';
-        card.textContent = text;
+        
+        // If the text contains HTML formatting
+        if (text.includes('<') && text.includes('>')) {
+            // Use innerHTML to preserve formatting
+            card.innerHTML = text;
+        } else {
+            // Plain text
+            card.textContent = text;
+        }
     }
     
     // Store the original text for editing (including the # for headers)
@@ -171,13 +219,17 @@ async function processLinks() {
     let lastVideoId = null;
     
     for (let i = 0; i < inputs.length; i++) {
-        const input = inputs[i];
+        // Get the current input and normalize any HTML entities in URLs
+        const input = fixHtmlEntitiesInUrls(inputs[i]);
         
         // Parse the input to check for a custom title
         const { hasCustomTitle, customTitle, link, skipTitle } = parseLinkWithTitle(input);
         
-        // If it's not a valid URL after parsing, it's text content
-        if (!isValidUrl(link)) {
+        // Check if the input contains a URL pattern
+        const containsUrl = input.match(/https?:\/\/[^\s]+/);
+        
+        // If it doesn't contain a URL or isn't a valid URL after parsing, treat it as text content
+        if (!containsUrl || !isValidUrl(link)) {
             // Create a text card for the content
             const textCard = createTextCard(input);
             linksContainer.appendChild(textCard);
@@ -318,13 +370,19 @@ function getCurrentLinksFromCards() {
 newLinksButton.addEventListener('click', () => {
     // Get current links from cards and populate the textarea
     const currentLinks = getCurrentLinksFromCards();
-    urlInput.value = currentLinks.join('\n');
+    const content = currentLinks.join('\n');
+    urlInput.value = content;
+    
+    // Update the rich text editor
+    setQuillContent(content);
     
     // Show input section
     toggleInputSection(true);
     
-    // Focus the textarea
-    urlInput.focus();
+    // Focus the rich text editor
+    if (quill) {
+        quill.focus();
+    }
 });
 
 // Function to copy shareable link to clipboard
@@ -360,50 +418,62 @@ function formatTime(seconds) {
 
 // Function to extract YouTube video ID and parameters from various URL formats
 function extractYouTubeInfo(url) {
+    // Clean the URL from any HTML tags that might have been added by the rich text editor
+    const cleanUrl = url.replace(/<\/?[^>]+(>|$)/g, "");
+    
+    // Make sure any HTML entities in the URL are properly decoded
+    const decodedUrl = cleanUrl.replace(/&amp;/g, '&');
+    
     // Extract video ID
     const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-    const match = url.match(regExp);
-    const videoId = (match && match[7].length === 11) ? match[7] : null;
+    const match = decodedUrl.match(regExp);
+    const videoId = (match && match[7] && match[7].length === 11) ? match[7] : null;
     
     if (!videoId) return { videoId: null };
     
-    // Parse URL to extract parameters
-    const urlObj = new URL(url);
-    const params = {};
+    try {
+        // Parse URL to extract parameters
+        const urlObj = new URL(decodedUrl);
+        const params = {};
+        
+        // Get time parameters (t/start and end)
+        let startTime = urlObj.searchParams.get('t') || urlObj.searchParams.get('start');
+        let endTime = urlObj.searchParams.get('end');
     
-    // Get time parameters (t/start and end)
-    let startTime = urlObj.searchParams.get('t') || urlObj.searchParams.get('start');
-    let endTime = urlObj.searchParams.get('end');
-    
-    // Process start time
-    if (startTime) {
-        // Convert to seconds if it's in the format like "4m20s"
-        if (typeof startTime === 'string' && startTime.includes('m')) {
-            const minutesMatch = startTime.match(/(\d+)m/);
-            const secondsMatch = startTime.match(/(\d+)s/);
-            let seconds = 0;
-            if (minutesMatch) seconds += parseInt(minutesMatch[1]) * 60;
-            if (secondsMatch) seconds += parseInt(secondsMatch[1]);
-            startTime = seconds;
+        // Process start time
+        if (startTime) {
+            // Convert to seconds if it's in the format like "4m20s"
+            if (typeof startTime === 'string' && startTime.includes('m')) {
+                const minutesMatch = startTime.match(/(\d+)m/);
+                const secondsMatch = startTime.match(/(\d+)s/);
+                let seconds = 0;
+                if (minutesMatch) seconds += parseInt(minutesMatch[1]) * 60;
+                if (secondsMatch) seconds += parseInt(secondsMatch[1]);
+                startTime = seconds;
+            }
+            params.start = startTime;
         }
-        params.start = startTime;
-    }
-    
-    // Process end time
-    if (endTime) {
-        // Convert to seconds if it's in the format like "4m20s"
-        if (typeof endTime === 'string' && endTime.includes('m')) {
-            const minutesMatch = endTime.match(/(\d+)m/);
-            const secondsMatch = endTime.match(/(\d+)s/);
-            let seconds = 0;
-            if (minutesMatch) seconds += parseInt(minutesMatch[1]) * 60;
-            if (secondsMatch) seconds += parseInt(secondsMatch[1]);
-            endTime = seconds;
+        
+        // Process end time
+        if (endTime) {
+            // Convert to seconds if it's in the format like "4m20s"
+            if (typeof endTime === 'string' && endTime.includes('m')) {
+                const minutesMatch = endTime.match(/(\d+)m/);
+                const secondsMatch = endTime.match(/(\d+)s/);
+                let seconds = 0;
+                if (minutesMatch) seconds += parseInt(minutesMatch[1]) * 60;
+                if (secondsMatch) seconds += parseInt(secondsMatch[1]);
+                endTime = seconds;
+            }
+            params.end = endTime;
         }
-        params.end = endTime;
+        
+        return { videoId, params };
+        
+    } catch (error) {
+        console.error('Error parsing YouTube URL parameters:', error);
+        return { videoId, params: {} };
     }
-    
-    return { videoId, params };
 }
 
 // Helper function to fetch video duration
@@ -680,5 +750,107 @@ function makeVideoTitleEditable(event) {
     });
 }
 
+// Initialize Quill rich text editor
+function initRichTextEditor() {
+    if (typeof Quill === 'undefined') {
+        console.error('Quill library not loaded');
+        return;
+    }
+    
+    // Configure Quill toolbar options
+    const toolbarOptions = [
+        ['bold', 'italic', 'underline', 'strike'],
+        ['color', 'background']
+    ];
+    
+    // Initialize Quill editor
+    quill = new Quill('#rich-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: '#editor-toolbar'
+        },
+        placeholder: 'Enter YouTube links or text...'
+    });
+    
+    // Sync Quill content to the hidden textarea
+    quill.on('text-change', function() {
+        // Get the HTML content from Quill
+        const htmlContent = quill.root.innerHTML;
+        
+        // Update the hidden textarea with the HTML content
+        urlInput.value = convertQuillContentToLines(htmlContent);
+    });
+}
+
+// Convert Quill HTML content to a format compatible with our existing code
+function convertQuillContentToLines(html) {
+    // Create a DOM parser to handle the HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // Get all paragraphs from the Quill content
+    const paragraphs = doc.querySelectorAll('p');
+    const lines = [];
+    
+    // Process each paragraph
+    paragraphs.forEach(p => {
+        // If the paragraph only contains a <br>, it's an empty line
+        if (p.innerHTML === '<br>') {
+            lines.push('');
+            return;
+        }
+        
+        // Get paragraph content with formatting preserved
+        let content = p.innerHTML;
+        
+        // Check if this line contains a URL and fix any HTML entities in it
+        if (content.includes('http')) {
+            // Extract URLs and normalize them
+            content = fixHtmlEntitiesInUrls(content);
+        }
+        
+        lines.push(content);
+    });
+    
+    return lines.join('\n');
+}
+
+// Set Quill content from plain text or HTML
+function setQuillContent(content) {
+    if (!quill) return;
+    
+    // Split content into lines
+    const lines = content.split('\n');
+    
+    // Create HTML structure for Quill
+    let html = '';
+    lines.forEach((line, index) => {
+        // Check if line appears to be HTML or plain text
+        if (line.includes('<') && line.includes('>')) {
+            // Wrap HTML content in a paragraph
+            html += `<p>${line}</p>`;
+        } else {
+            // Escape plain text and wrap in a paragraph
+            html += `<p>${escapeHtml(line)}</p>`;
+        }
+    });
+    
+    // Set the HTML content in the editor
+    quill.root.innerHTML = html;
+}
+
+// Helper function to escape HTML special characters
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Execute on page load
-window.addEventListener('load', parseUrlParams);
+window.addEventListener('load', function() {
+    // Initialize the rich text editor
+    initRichTextEditor();
+    
+    // Parse URL parameters if present
+    parseUrlParams();
+});
