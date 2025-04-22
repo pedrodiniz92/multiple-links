@@ -348,21 +348,42 @@ button {
     to { opacity: 1; transform: translateY(0); }
 }
 
-.link-card {
+.link-card, .text-card, .header-card {
     background-color: var(--card-bg);
     padding: 1rem;
     margin-bottom: 0.8rem;
     border-radius: 8px;
-    cursor: pointer;
     box-shadow: var(--card-shadow);
-    word-break: break-all;
+    word-break: break-word;
     border: 1px solid var(--border-color);
     transition: all 0.2s;
     position: relative;
     font-size: 0.85rem;
     color: var(--text-secondary);
+}
+
+.link-card {
+    cursor: pointer;
     display: flex;
     align-items: center;
+}
+
+.text-card {
+    line-height: 1.5;
+    font-weight: normal;
+    cursor: default;
+}
+
+.header-card {
+    background-color: var(--video-title-bg);
+    border-color: var(--video-title-border);
+    font-weight: 500;
+    line-height: 1.4;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    cursor: default;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
 }
 
 .link-card:hover {

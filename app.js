@@ -124,25 +124,70 @@ function parseLinkWithTitle(input) {
     };
 }
 
+// Function to check if input is a valid URL
+function isValidUrl(string) {
+    try {
+        new URL(string);
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
+// Function to create a text card
+function createTextCard(text) {
+    // Check if this is a header (starts with #)
+    const isHeader = text.trim().startsWith('#');
+    
+    const card = document.createElement('div');
+    
+    if (isHeader) {
+        // Create a header card
+        card.className = 'header-card';
+        // Remove the # symbol from the display text
+        const headerText = text.trim().substring(1).trim();
+        card.textContent = headerText;
+    } else {
+        // Create a regular text card
+        card.className = 'text-card';
+        card.textContent = text;
+    }
+    
+    // Store the original text for editing (including the # for headers)
+    card.dataset.originalText = text;
+    
+    return card;
+}
+
 // Process links and create cards
 async function processLinks() {
     // Always clear existing content and reset counter when processing links
     linksContainer.innerHTML = '';
     resetCardCounter();
     
-    const linkInputs = urlInput.value.split('\n').filter(link => link.trim());
+    const inputs = urlInput.value.split('\n').filter(input => input.trim());
     
-    // Process each link in the order they were entered
+    // Process each input in the order they were entered
     let lastVideoId = null;
     
-    for (let i = 0; i < linkInputs.length; i++) {
-        const linkInput = linkInputs[i];
+    for (let i = 0; i < inputs.length; i++) {
+        const input = inputs[i];
         
-        // Parse the link to check for a custom title
-        const { hasCustomTitle, customTitle, link, skipTitle } = parseLinkWithTitle(linkInput);
+        // Parse the input to check for a custom title
+        const { hasCustomTitle, customTitle, link, skipTitle } = parseLinkWithTitle(input);
         
+        // If it's not a valid URL after parsing, it's text content
+        if (!isValidUrl(link)) {
+            // Create a text card for the content
+            const textCard = createTextCard(input);
+            linksContainer.appendChild(textCard);
+            continue;
+        }
+        
+        // Extract YouTube video ID
         const { videoId } = extractYouTubeInfo(link);
         
+        // If not a YouTube link, skip (could be extended to handle other types)
         if (!videoId) continue;
         
         // Determine if we need to show a video title
@@ -183,7 +228,7 @@ async function processLinks() {
         card.className = 'link-card';
         
         // Store the original link input (including custom title if present)
-        card.dataset.originalLink = linkInput;
+        card.dataset.originalLink = input;
         
         // Store the actual link for playing the video
         card.dataset.videoLink = link;
@@ -224,8 +269,8 @@ async function processLinks() {
         
         linksContainer.appendChild(card);
         
-        // If it's the first link and we're starting fresh, load it automatically
-        if (i === 0 && document.querySelectorAll('.link-card').length === linkInputs.length) {
+        // If it's the first video link and we're starting fresh, load it automatically
+        if (i === 0 && document.querySelectorAll('.link-card').length === 1) {
             card.classList.add('active');
             loadVideo(card.dataset.videoLink);
         }
@@ -239,21 +284,34 @@ goButton.addEventListener('click', async () => {
     toggleInputSection(false); // Hide input after processing links
 });
 
-// Helper function to extract current links from cards
+// Helper function to extract current links and text from cards
 function getCurrentLinksFromCards() {
-    // Get all cards and extract the original links (including custom title syntax)
-    const cards = document.querySelectorAll('.link-card');
-    const links = [];
+    // Get all cards (link cards, text cards, and header cards)
+    const allCards = [
+        ...document.querySelectorAll('.link-card'), 
+        ...document.querySelectorAll('.text-card'),
+        ...document.querySelectorAll('.header-card')
+    ];
     
-    cards.forEach(card => {
-        // Get the original link input from the data attribute
-        // This already includes the [Title]Link format if it was entered that way
-        if (card.dataset.originalLink) {
-            links.push(card.dataset.originalLink);
+    // Sort the cards by their position in the DOM to maintain the correct order
+    allCards.sort((a, b) => {
+        const position = a.compareDocumentPosition(b);
+        return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    });
+    
+    const contents = [];
+    
+    allCards.forEach(card => {
+        if (card.classList.contains('link-card') && card.dataset.originalLink) {
+            // Get the original link input from the data attribute (includes [Title]Link format)
+            contents.push(card.dataset.originalLink);
+        } else if ((card.classList.contains('text-card') || card.classList.contains('header-card')) && card.dataset.originalText) {
+            // Get the text content for text and header cards
+            contents.push(card.dataset.originalText);
         }
     });
     
-    return links;
+    return contents;
 }
 
 // Edit links button event listener
