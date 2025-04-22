@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Timestamp Test - Watch it!</title>
+    <style>
+        :root {
+            --primary-color: #3B82F6;
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --text-color: #111827;
+            --border-color: #e5e7eb;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --input-bg: #ffffff;
+            --input-border: #d1d5db;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #111827;
+                --card-bg: #1f2937;
+                --text-color: #f9fafb;
+                --border-color: #374151;
+                --input-bg: #374151;
+                --input-border: #4b5563;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.5;
+            padding: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 2rem;
+            margin: 2rem auto;
+        }
+
+        h1, h2, h3 {
+            color: var(--text-color);
+            margin-top: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .test-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            flex-grow: 1;
+        }
+
+        button:hover {
+            background-color: #2563eb;
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .viewer-container {
+            width: 100%;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            border-radius: 0.5rem;
+            background-color: #000;
+        }
+
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .test-info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .test-info p {
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        .test-info p:last-child {
+            margin-bottom: 0;
+        }
+
+        .log-container {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .log-entry {
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .log-entry.success {
+            color: var(--success-color);
+        }
+
+        .log-entry.error {
+            color: var(--error-color);
+        }
+
+        .test-buttons-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .solution-selector {
+            margin-bottom: 1.5rem;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--input-border);
+            border-radius: 0.375rem;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YouTube Timestamp Test</h1>
+
+        <div class="test-info">
+            <p>This page tests the YouTube timestamp issue where all clips start at the 4:17 mark regardless of specified timestamps.</p>
+            <p>The test uses the same video ID (DI-LKs3GpeE) with different timestamps to see if each clip properly starts at its specified time.</p>
+            <p>Choose a solution method and click on the test buttons to verify the fix.</p>
+        </div>
+
+        <div class="solution-selector">
+            <h3>Select Solution Method:</h3>
+            <select id="solution-selector">
+                <option value="0">No Solution (Original Issue)</option>
+                <option value="1">Solution #1: Add unique URL parameter</option>
+                <option value="2">Solution #2: Force reload with timestamp</option>
+                <option value="3" selected>Solution #3: Completely replace iframe (Recommended)</option>
+            </select>
+        </div>
+
+        <div class="viewer-container">
+            <iframe id="viewer" src="about:blank" allowfullscreen></iframe>
+        </div>
+
+        <h3>Test Clips:</h3>
+        <div class="test-buttons-container">
+            <button class="test-button" data-start="257" data-end="270">4:17 - 4:30</button>
+            <button class="test-button" data-start="452" data-end="465">7:32 - 7:45</button>
+            <button class="test-button" data-start="684" data-end="700">11:24 - 11:40</button>
+            <button class="test-button" data-start="990" data-end="1005">16:30 - 16:45</button>
+            <button class="test-button" data-start="2648" data-end="2668">44:08 - 44:28</button>
+            <button class="test-button" data-start="2800" data-end="2816">46:40 - 46:56</button>
+        </div>
+
+        <div class="test-controls">
+            <button id="reset-button">Reset Player</button>
+            <button id="test-all-button">Test All Clips</button>
+        </div>
+
+        <h3>Log:</h3>
+        <div class="log-container" id="log">
+            <div class="log-entry">Ready to test YouTube timestamp solutions...</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const viewer = document.getElementById('viewer');
+            const solutionSelector = document.getElementById('solution-selector');
+            const resetButton = document.getElementById('reset-button');
+            const testAllButton = document.getElementById('test-all-button');
+            const testButtons = document.querySelectorAll('.test-button');
+            const logContainer = document.getElementById('log');
+            
+            // YouTube video ID to test with
+            const videoId = 'DI-LKs3GpeE';
+            
+            // Function to log messages
+            function log(message, type = 'info') {
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = message;
+                logContainer.appendChild(entry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            // Function to reset the player
+            function resetPlayer() {
+                viewer.src = 'about:blank';
+                log('Player reset', 'success');
+            }
+            
+            // Solution 1: Add unique URL parameter
+            function loadVideoSolution1(start, end) {
+                const timestamp = Date.now();
+                const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&enablejsapi=1&start=${start}&end=${end}&unique=${timestamp}`;
+                
+                log(`Loading clip with Solution #1: ${formatTime(start)} - ${formatTime(end)}`);
+                viewer.src = embedUrl;
+                
+                return embedUrl;
+            }
+            
+            // Solution 2: Force reload with timestamp
+            function loadVideoSolution2(start, end) {
+                const timestamp = Date.now();
+                const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&enablejsapi=1&start=${start}&end=${end}&t=${timestamp}`;
+                
+                log(`Loading clip with Solution #2: ${formatTime(start)} - ${formatTime(end)}`);
+                
+                // Two-step process: first set to empty, then set to the new URL
+                viewer.src = 'about:blank';
+                setTimeout(() => {
+                    viewer.src = embedUrl;
+                }, 100);
+                
+                return embedUrl;
+            }
+            
+            // Solution 3: Completely replace iframe
+            function loadVideoSolution3(start, end) {
+                log(`Loading clip with Solution #3: ${formatTime(start)} - ${formatTime(end)}`);
+                
+                // Get the parent of the iframe
+                const parent = viewer.parentNode;
+                
+                // Remove the old iframe
+                parent.removeChild(viewer);
+                
+                // Create a new iframe
+                const newViewer = document.createElement('iframe');
+                newViewer.id = 'viewer';
+                
+                // Construct URL with parameters
+                const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&enablejsapi=1&start=${start}&end=${end}&cb=${Date.now()}`;
+                
+                // Set attributes and source
+                newViewer.setAttribute('src', embedUrl);
+                newViewer.setAttribute('allowfullscreen', 'true');
+                
+                // Add the new iframe to the DOM
+                parent.appendChild(newViewer);
+                
+                // Update the viewer reference
+                window.viewer = document.getElementById('viewer');
+                
+                return embedUrl;
+            }
+            
+            // Function to load video with selected solution
+            function loadVideo(start, end) {
+                const solution = parseInt(solutionSelector.value, 10);
+                
+                switch(solution) {
+                    case 1:
+                        return loadVideoSolution1(start, end);
+                    case 2:
+                        return loadVideoSolution2(start, end);
+                    case 3:
+                        return loadVideoSolution3(start, end);
+                    default:
+                        // No solution: Direct embed
+                        const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&start=${start}&end=${end}`;
+                        log(`Loading clip with NO solution: ${formatTime(start)} - ${formatTime(end)}`);
+                        viewer.src = embedUrl;
+                        return embedUrl;
+                }
+            }
+            
+            // Format seconds to MM:SS
+            function formatTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+            }
+            
+            // Test all clips in sequence
+            function testAllClips() {
+                resetPlayer();
+                log('Starting test of all clips in sequence...', 'success');
+                
+                const buttons = Array.from(testButtons);
+                let index = 0;
+                
+                function testNext() {
+                    if (index < buttons.length) {
+                        const button = buttons[index];
+                        const start = parseInt(button.dataset.start, 10);
+                        const end = parseInt(button.dataset.end, 10);
+                        
+                        setTimeout(() => {
+                            loadVideo(start, end);
+                            index++;
+                            
+                            // Wait for the clip duration plus a buffer before playing the next clip
+                            const duration = (end - start) + 2; // Add 2 seconds buffer
+                            setTimeout(testNext, duration * 1000);
+                        }, 1000); // Wait 1 second before starting each clip
+                    } else {
+                        log('All clips tested!', 'success');
+                    }
+                }
+                
+                testNext();
+            }
+            
+            // Add event listeners
+            resetButton.addEventListener('click', resetPlayer);
+            
+            testAllButton.addEventListener('click', function() {
+                testAllClips();
+            });
+            
+            testButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const start = parseInt(this.dataset.start, 10);
+                    const end = parseInt(this.dataset.end, 10);
+                    loadVideo(start, end);
+                });
+            });
+            
+            solutionSelector.addEventListener('change', function() {
+                resetPlayer();
+                log(`Solution method changed to: ${this.options[this.selectedIndex].text}`);
+            });
+            
+            // Initialize
+            log('YouTube timestamp test initialized. Select a solution method and test the clips.');
+        });
+    </script>
+</body>
+</html>

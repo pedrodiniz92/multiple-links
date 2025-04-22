@@ -1291,21 +1291,47 @@ async function fetchVideoTitle(videoId) {
 }
 
 // Function to load a video into the iframe
+// Using Solution #3 from next.md with a more robust approach
+// This completely replaces the iframe to ensure a fresh state for each video
 function loadVideo(url) {
-    const { videoId, params } = extractYouTubeInfo(url);
+    // Make sure we're working with a valid URL
+    if (!url || typeof url !== 'string') {
+        console.error('Invalid URL provided to loadVideo:', url);
+        return;
+    }
     
-    if (videoId) {
-        // First check if we have a pre-generated embed URL for this video
-        const embedKey = `video_embed_${videoId}`;
-        const storedEmbedUrl = localStorage.getItem(embedKey);
+    // Use try/catch to handle any unexpected errors
+    try {
+        const { videoId, params } = extractYouTubeInfo(url);
         
-        if (storedEmbedUrl) {
-            console.log(`Using stored embed URL for ${videoId}: ${storedEmbedUrl}`);
-            viewer.src = storedEmbedUrl;
+        if (!videoId) {
+            // If it's not a YouTube URL, try to load it directly
+            // Ensure URL uses HTTPS for security
+            let secureUrl = url;
+            if (url.startsWith('http:')) {
+                secureUrl = url.replace('http:', 'https:');
+                console.log('Upgrading URL to HTTPS for security');
+            }
+            viewer.src = secureUrl;
             return;
         }
         
-        // Check if we have stored time data with an embed URL
+        // Extract start and end times
+        let startTime = null;
+        let endTime = null;
+        
+        // First try to get from URL parameters
+        if (params.start) {
+            startTime = parseInt(params.start, 10);
+        } else if (params.t) {
+            startTime = parseInt(params.t, 10);
+        }
+        
+        if (params.end) {
+            endTime = parseInt(params.end, 10);
+        }
+        
+        // Then check if we have stored time data
         const timeKey = `video_times_${videoId}`;
         const storedTimeData = localStorage.getItem(timeKey);
         
@@ -1313,60 +1339,108 @@ function loadVideo(url) {
             try {
                 const timeData = JSON.parse(storedTimeData);
                 
-                if (timeData.embedUrl) {
-                    console.log(`Using embed URL from time data for ${videoId}: ${timeData.embedUrl}`);
-                    viewer.src = timeData.embedUrl;
-                    return;
+                if (timeData.start !== null && startTime === null) {
+                    startTime = parseInt(timeData.start, 10);
                 }
                 
-                // If we have time data but no embed URL, create one
-                if (timeData.start !== null || timeData.end !== null) {
-                    let embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0`;
-                    
-                    if (timeData.start !== null) {
-                        embedUrl += `&start=${timeData.start}`;
-                    }
-                    
-                    if (timeData.end !== null) {
-                        embedUrl += `&end=${timeData.end}`;
-                    }
-                    
-                    console.log(`Created embed URL from time data: ${embedUrl}`);
-                    viewer.src = embedUrl;
-                    
-                    // Store this embed URL for future use
-                    localStorage.setItem(embedKey, embedUrl);
-                    
-                    return;
+                if (timeData.end !== null && endTime === null) {
+                    endTime = parseInt(timeData.end, 10);
                 }
             } catch (e) {
                 console.warn('Error parsing stored time data:', e);
             }
         }
         
-        // If we don't have any pre-generated embed URL, create a basic one
-        // Extract any start time from the URL query parameters
-        let startTime = null;
+        console.log(`Loading video ${videoId} with start: ${startTime}, end: ${endTime}`);
         
-        if (params.start) {
-            startTime = params.start;
-        } else if (params.t) {
-            startTime = params.t;
+        // Verify we can get the current viewer element
+        const oldViewer = document.getElementById('viewer');
+        if (!oldViewer) {
+            console.error('Could not find viewer iframe element');
+            return;
         }
         
-        // Create a new embed URL with parameters
-        let embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0`;
+        const parent = oldViewer.parentNode;
+        if (!parent) {
+            console.error('Viewer iframe has no parent element');
+            return;
+        }
+        
+        // Create a completely new iframe for each video to avoid caching issues
+        // This is more reliable than just changing the src attribute
+        try {
+            // Remove the old iframe completely
+            parent.removeChild(oldViewer);
+        } catch (e) {
+            console.warn('Error removing old iframe:', e);
+            // If removal fails, try to proceed anyway
+        }
+        
+        // Create a new iframe with unique ID to ensure fresh state
+        const uniqueId = `viewer_${Date.now()}`;
+        const newViewer = document.createElement('iframe');
+        newViewer.id = 'viewer'; // Keep the same ID for future reference
+        
+        // Construct URL with parameters - always use HTTPS
+        let embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&enablejsapi=1`;
         
         if (startTime !== null) {
             embedUrl += `&start=${startTime}`;
         }
         
-        console.log(`Generated new embed URL: ${embedUrl}`);
-        viewer.src = embedUrl;
-    } else {
-        // If it's not a YouTube URL, try to load it directly
-        // This will work for other websites that allow embedding
-        viewer.src = url;
+        if (endTime !== null) {
+            embedUrl += `&end=${endTime}`;
+        }
+        
+        // Add cache busting parameter with both timestamp and a random number
+        embedUrl += `&cb=${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+        
+        // Set attributes and source
+        newViewer.setAttribute('src', embedUrl);
+        newViewer.setAttribute('frameborder', '0');
+        newViewer.setAttribute('allowfullscreen', 'true');
+        
+        // Add error handling for iframe loading issues
+        newViewer.onerror = function() {
+            console.error('Error loading iframe content');
+        };
+        
+        // Add the new iframe to the DOM
+        parent.appendChild(newViewer);
+        
+        // Update the global viewer reference
+        window.viewer = document.getElementById('viewer');
+        
+        console.log(`Created new iframe with URL: ${embedUrl}`);
+        
+        // Store this successful videoId and timestamp combination
+        try {
+            const successRecord = {
+                videoId,
+                startTime,
+                endTime,
+                timestamp: Date.now(),
+                url: embedUrl
+            };
+            localStorage.setItem(`last_successful_load_${videoId}`, JSON.stringify(successRecord));
+        } catch (e) {
+            // Non-critical storage error
+            console.warn('Error storing successful video load record:', e);
+        }
+    } catch (error) {
+        console.error('Unexpected error in loadVideo function:', error);
+        // Attempt to recover by using a direct YouTube URL
+        if (url && url.includes('youtube.com')) {
+            console.log('Attempting to recover with direct URL loading');
+            try {
+                const fallbackViewer = document.getElementById('viewer');
+                if (fallbackViewer) {
+                    fallbackViewer.src = url;
+                }
+            } catch (e) {
+                console.error('Recovery attempt failed:', e);
+            }
+        }
     }
 }
 
