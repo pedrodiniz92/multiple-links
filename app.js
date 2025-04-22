@@ -439,37 +439,84 @@ function extractYouTubeInfo(url) {
     // Try different methods to extract video ID
     let videoId = null;
     
-    // Method 1: Standard YouTube URL patterns
-    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-    const match = decodedUrl.match(regExp);
-    videoId = (match && match[7] && match[7].length === 11) ? match[7] : null;
+    // Method 1: Try using URL API to extract the 'v' parameter - most reliable for complex URLs
+    try {
+        const urlObj = new URL(decodedUrl);
+        const searchParams = urlObj.searchParams;
+        
+        // Check for 'v' parameter which contains the video ID
+        if (searchParams.has('v')) {
+            const vParam = searchParams.get('v');
+            // Validate that it's likely a YouTube video ID (11 characters with specific patterns)
+            if (vParam && vParam.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(vParam)) {
+                videoId = vParam;
+                console.log("Extracted video ID from v parameter:", videoId);
+            }
+        }
+    } catch (e) {
+        console.warn("Error parsing URL with URL API:", e);
+    }
     
-    // Method 2: Direct youtu.be URL
+    // Method 2: Standard YouTube URL patterns (if method 1 failed)
+    if (!videoId) {
+        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+        const match = decodedUrl.match(regExp);
+        if (match && match[7] && match[7].length === 11) {
+            videoId = match[7];
+            console.log("Extracted video ID using regex pattern:", videoId);
+        }
+    }
+    
+    // Method 3: Direct youtu.be URL (if methods 1-2 failed)
     if (!videoId && decodedUrl.includes('youtu.be/')) {
         const youtubeShortMatch = decodedUrl.match(/youtu\.be\/([^?#&/]{11})/);
         if (youtubeShortMatch && youtubeShortMatch[1]) {
             videoId = youtubeShortMatch[1];
+            console.log("Extracted video ID from youtu.be URL:", videoId);
         }
     }
     
-    // Method 3: URL with v parameter
-    if (!videoId && decodedUrl.includes('youtube.com')) {
-        try {
-            const urlObj = new URL(decodedUrl);
-            videoId = urlObj.searchParams.get('v');
-        } catch (e) {
-            console.warn("Error parsing URL:", e);
+    // Method 4: Look for any 11-character string that looks like a YouTube ID
+    if (!videoId) {
+        // This is a more aggressive method - only use if nothing else worked
+        const possibleIdMatch = decodedUrl.match(/[a-zA-Z0-9_-]{11}/g);
+        if (possibleIdMatch && possibleIdMatch.length > 0) {
+            // If there are multiple matches, use the first one that appears after "v="
+            const vIndex = decodedUrl.indexOf("v=");
+            if (vIndex !== -1) {
+                for (const match of possibleIdMatch) {
+                    if (decodedUrl.indexOf(match) > vIndex) {
+                        videoId = match;
+                        console.log("Extracted video ID by finding first 11-char pattern after v=:", videoId);
+                        break;
+                    }
+                }
+            }
+            
+            // If we still don't have a match, use the first one found
+            if (!videoId) {
+                videoId = possibleIdMatch[0];
+                console.log("Extracted video ID using first 11-char pattern found:", videoId);
+            }
         }
     }
     
-    console.log("Extracted video ID:", videoId);
+    console.log("Final extracted video ID:", videoId);
     
     if (!videoId) return { videoId: null };
     
     try {
-        // Parse URL to extract parameters
-        const urlObj = new URL(decodedUrl);
+        // Parse URL to extract parameters, ensuring we handle complex URLs properly
         const params = {};
+        let urlObj;
+        
+        try {
+            urlObj = new URL(decodedUrl);
+        } catch (e) {
+            console.warn("Error creating URL object from full URL:", e);
+            // If the URL is invalid, create a more permissive one that will still work for params
+            urlObj = new URL(`https://www.youtube.com/watch?v=${videoId}`);
+        }
         
         // Get time parameters (t/start and end)
         let startTime = urlObj.searchParams.get('t') || urlObj.searchParams.get('start');
@@ -486,7 +533,35 @@ function extractYouTubeInfo(url) {
                 if (secondsMatch) seconds += parseInt(secondsMatch[1]);
                 startTime = seconds;
             }
+            
+            // Convert start time to integer if possible
+            startTime = parseInt(startTime) || startTime;
+            
+            // For embed URLs, use 'start' parameter
             params.start = startTime;
+            
+            // Save for future use
+            const timeKey = `video_times_${videoId}`;
+            let timeData = { 
+                start: startTime, 
+                end: null, 
+                timestamp: Date.now() 
+            };
+            
+            // Check for existing end time to preserve
+            try {
+                const existingData = localStorage.getItem(timeKey);
+                if (existingData) {
+                    const parsedData = JSON.parse(existingData);
+                    if (parsedData.end !== null) {
+                        timeData.end = parsedData.end;
+                    }
+                }
+            } catch (e) {
+                console.warn('Error checking existing time data:', e);
+            }
+            
+            localStorage.setItem(timeKey, JSON.stringify(timeData));
         }
         
         // Process end time
@@ -500,7 +575,35 @@ function extractYouTubeInfo(url) {
                 if (secondsMatch) seconds += parseInt(secondsMatch[1]);
                 endTime = seconds;
             }
+            
+            // Convert end time to integer if possible
+            endTime = parseInt(endTime) || endTime;
+            
+            // For embed URLs, use 'end' parameter
             params.end = endTime;
+            
+            // Save for future use
+            const timeKey = `video_times_${videoId}`;
+            let timeData = { 
+                start: null, 
+                end: endTime, 
+                timestamp: Date.now() 
+            };
+            
+            // Check for existing start time to preserve
+            try {
+                const existingData = localStorage.getItem(timeKey);
+                if (existingData) {
+                    const parsedData = JSON.parse(existingData);
+                    if (parsedData.start !== null) {
+                        timeData.start = parsedData.start;
+                    }
+                }
+            } catch (e) {
+                console.warn('Error checking existing time data:', e);
+            }
+            
+            localStorage.setItem(timeKey, JSON.stringify(timeData));
         }
         
         return { videoId, params };
@@ -1192,17 +1295,73 @@ function loadVideo(url) {
     const { videoId, params } = extractYouTubeInfo(url);
     
     if (videoId) {
-        let embedUrl = `https://www.youtube.com/embed/${videoId}`;
+        // First check if we have a pre-generated embed URL for this video
+        const embedKey = `video_embed_${videoId}`;
+        const storedEmbedUrl = localStorage.getItem(embedKey);
         
-        // Add parameters if they exist
-        if (Object.keys(params).length > 0) {
-            embedUrl += '?';
-            for (const [key, value] of Object.entries(params)) {
-                embedUrl += `${key}=${value}&`;
-            }
-            embedUrl = embedUrl.slice(0, -1); // Remove the trailing &
+        if (storedEmbedUrl) {
+            console.log(`Using stored embed URL for ${videoId}: ${storedEmbedUrl}`);
+            viewer.src = storedEmbedUrl;
+            return;
         }
         
+        // Check if we have stored time data with an embed URL
+        const timeKey = `video_times_${videoId}`;
+        const storedTimeData = localStorage.getItem(timeKey);
+        
+        if (storedTimeData) {
+            try {
+                const timeData = JSON.parse(storedTimeData);
+                
+                if (timeData.embedUrl) {
+                    console.log(`Using embed URL from time data for ${videoId}: ${timeData.embedUrl}`);
+                    viewer.src = timeData.embedUrl;
+                    return;
+                }
+                
+                // If we have time data but no embed URL, create one
+                if (timeData.start !== null || timeData.end !== null) {
+                    let embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0`;
+                    
+                    if (timeData.start !== null) {
+                        embedUrl += `&start=${timeData.start}`;
+                    }
+                    
+                    if (timeData.end !== null) {
+                        embedUrl += `&end=${timeData.end}`;
+                    }
+                    
+                    console.log(`Created embed URL from time data: ${embedUrl}`);
+                    viewer.src = embedUrl;
+                    
+                    // Store this embed URL for future use
+                    localStorage.setItem(embedKey, embedUrl);
+                    
+                    return;
+                }
+            } catch (e) {
+                console.warn('Error parsing stored time data:', e);
+            }
+        }
+        
+        // If we don't have any pre-generated embed URL, create a basic one
+        // Extract any start time from the URL query parameters
+        let startTime = null;
+        
+        if (params.start) {
+            startTime = params.start;
+        } else if (params.t) {
+            startTime = params.t;
+        }
+        
+        // Create a new embed URL with parameters
+        let embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0`;
+        
+        if (startTime !== null) {
+            embedUrl += `&start=${startTime}`;
+        }
+        
+        console.log(`Generated new embed URL: ${embedUrl}`);
         viewer.src = embedUrl;
     } else {
         // If it's not a YouTube URL, try to load it directly
@@ -1369,6 +1528,8 @@ function setupYouTubeLinkButton() {
         // Clear previous inputs
         youtubeUrlInput.value = '';
         youtubeTitleInput.value = '';
+        document.getElementById('youtube-start-time').value = '';
+        document.getElementById('youtube-end-time').value = '';
         
         // Show the modal with flexbox display
         youtubeModal.style.display = 'flex';
@@ -1382,10 +1543,12 @@ function setupYouTubeLinkButton() {
         youtubeModal.style.display = 'none';
     }
     
-    // Function to insert the YouTube link with optional title
+    // Function to insert the YouTube link with optional title, start and end times
     function insertYouTubeLink() {
         const url = youtubeUrlInput.value.trim();
         const title = youtubeTitleInput.value.trim();
+        const startTime = document.getElementById('youtube-start-time').value.trim();
+        const endTime = document.getElementById('youtube-end-time').value.trim();
         
         if (!url) {
             // Alert user if no URL is provided
@@ -1399,8 +1562,65 @@ function setupYouTubeLinkButton() {
             return;
         }
         
+        // Extract video ID from URL
+        const { videoId } = extractYouTubeInfo(url);
+        
+        if (!videoId) {
+            alert('Invalid YouTube URL. Could not extract video ID.');
+            return;
+        }
+        
+        // Convert time format to seconds
+        let startSeconds = timeToSeconds(startTime);
+        let endSeconds = timeToSeconds(endTime);
+        
+        // Validate times if provided
+        if (startTime && startSeconds === null) {
+            alert('Invalid start time format. Please use MM:SS or H:MM:SS format.');
+            return;
+        }
+        
+        if (endTime && endSeconds === null) {
+            alert('Invalid end time format. Please use MM:SS or H:MM:SS format.');
+            return;
+        }
+        
+        if (startSeconds !== null && endSeconds !== null && startSeconds >= endSeconds) {
+            alert('Start time must be less than end time.');
+            return;
+        }
+        
+        // Create an embeddable URL with proper parameters
+        // This follows the pattern from youtube-embed.html
+        let embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0`;
+        
+        // Add start and end parameters if provided
+        if (startSeconds !== null) {
+            embedUrl += `&start=${startSeconds}`;
+        }
+        
+        if (endSeconds !== null) {
+            embedUrl += `&end=${endSeconds}`;
+        }
+        
+        // Use embed URL for both display and loading when we have time constraints
+        // This ensures that the embed URL is directly visible in the text when times are specified
+        let displayUrl;
+        
+        // Use embed URL directly in the text if we have both start and end times
+        // or just an end time (since end times only work with embed URLs)
+        if (endSeconds !== null) {
+            displayUrl = embedUrl;
+        } else if (startSeconds !== null) {
+            // For just start time, use regular YouTube URL with timestamp for better compatibility
+            displayUrl = `https://www.youtube.com/watch?v=${videoId}&t=${startSeconds}`;
+        } else {
+            // No time constraints, use regular YouTube URL
+            displayUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        }
+        
         // Format with [Title]URL syntax if title is provided
-        const formattedLink = title ? `[${title}]${url}` : url;
+        const formattedLink = title ? `[${title}]${displayUrl}` : displayUrl;
         
         // Get current selection
         const selection = quill.getSelection();
@@ -1409,8 +1629,64 @@ function setupYouTubeLinkButton() {
         // Insert the link at current cursor position
         quill.insertText(insertPosition, formattedLink);
         
+        // Store both the embed URL and times in localStorage for later use
+        const embedKey = `video_embed_${videoId}`;
+        localStorage.setItem(embedKey, embedUrl);
+        
+        // Also store the times separately for any future reference
+        const timeKey = `video_times_${videoId}`;
+        const timeData = {
+            start: startSeconds,
+            end: endSeconds,
+            embedUrl: embedUrl,  // Store the complete embed URL
+            timestamp: Date.now()
+        };
+        
+        localStorage.setItem(timeKey, JSON.stringify(timeData));
+        
+        console.log(`Stored embed URL for video ${videoId}: ${embedUrl}`);
+        
         // Hide the modal
         hideYouTubeModal();
+    }
+    
+    // Function to convert time format (MM:SS or H:MM:SS) to seconds
+    function timeToSeconds(timeString) {
+        if (!timeString) return null;
+
+        // Handle various time formats
+        let seconds = 0;
+        let parts;
+
+        // Handle MM:SS format
+        if (/^\d+:\d{1,2}$/.test(timeString)) {
+            parts = timeString.split(':');
+            const minutes = parseInt(parts[0], 10);
+            const secs = parseInt(parts[1], 10);
+            
+            if (secs >= 60) return null; // Invalid seconds value
+            seconds = minutes * 60 + secs;
+            return seconds;
+        }
+        
+        // Handle H:MM:SS format
+        if (/^\d+:\d{1,2}:\d{1,2}$/.test(timeString)) {
+            parts = timeString.split(':');
+            const hours = parseInt(parts[0], 10);
+            const minutes = parseInt(parts[1], 10);
+            const secs = parseInt(parts[2], 10);
+            
+            if (minutes >= 60 || secs >= 60) return null; // Invalid values
+            seconds = hours * 3600 + minutes * 60 + secs;
+            return seconds;
+        }
+        
+        // Handle just seconds as a number
+        if (/^\d+$/.test(timeString)) {
+            return parseInt(timeString, 10);
+        }
+        
+        return null; // Invalid format
     }
     
     // Function to fetch title from YouTube

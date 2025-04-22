@@ -1,3 +1,26 @@
+create a new html page that does the following
+
+i enter 
+* a youtube video, 
+* a start time and 
+* an end time.
+
+Input Example:
+https://www.youtube.com/watch?v=DI-LKs3GpeE
+4:17
+4:30
+
+I get an embed link with those start and end times coded in
+Output Example:
+https://www.youtube.com/embed/DI-LKs3GpeE?start=257&end=270
+
+If I enter nothing into start time, start from the beginning of the video.
+If I enter nothing into end time, let it run to the end of the video.
+----
+The current syntax for video titles can be confusing. I want to add a button called "Add youtube link". Once clicked, I can add a link and the title I want, and it adds it into the editor with the proper tagging.
+
+----
+
 Now, I want to be able to add more than just youtube videos. If I add text that's not a youtube video, make it a card like the current title cards, meaning, it's not numbered.
 But the title cards have bold text. For these, I want regular text.
 Each paragraph becomes a new card.
