@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Saved Lists - Watch it!</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #f0f0f0;
+            --text-primary: #333333;
+            --text-secondary: #555555;
+            --accent-primary: #3B82F6;
+            --accent-secondary: #3B82F6;
+            --card-bg: #ffffff;
+            --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+            --border-color: #eaeaea;
+            --input-bg: #ffffff;
+            --input-border: #dedede;
+            --success-color: #10b981;
+            --warning-color: #eab308;
+            --danger-color: #ef4444;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252525;
+            --bg-tertiary: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --accent-primary: #60A5FA;
+            --accent-secondary: #60A5FA;
+            --card-bg: #333333;
+            --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            --border-color: #444444;
+            --input-bg: #333333;
+            --input-border: #555555;
+            --success-color: #34d399;
+            --warning-color: #fbbf24;
+            --danger-color: #f87171;
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .top-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .theme-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .theme-icon {
+            width: 14px;
+            height: 14px;
+            position: relative;
+            opacity: 0.4;
+        }
+
+        #theme-toggle {
+            width: 40px;
+            height: 24px;
+            border-radius: 12px;
+            background-color: var(--bg-tertiary);
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border: 1px solid var(--border-color);
+        }
+
+        #theme-toggle::after {
+            content: "";
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: var(--accent-primary);
+            top: 3px;
+            left: 3px;
+            transition: transform 0.3s;
+        }
+
+        [data-theme="dark"] #theme-toggle::after {
+            transform: translateX(16px);
+        }
+
+        .user-menu {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            min-width: 200px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            z-index: 100;
+            display: none;
+        }
+
+        .user-menu:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--bg-secondary);
+        }
+
+        .dropdown-item.danger {
+            color: var(--danger-color);
+        }
+
+        .search-container {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--input-border);
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            background-color: var(--accent-primary);
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .button:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .button.secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .button.secondary:hover {
+            background-color: var(--bg-secondary);
+        }
+
+        .lists-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        .list-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .list-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .list-thumbnail {
+            width: 100%;
+            height: 160px;
+            background-color: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .list-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .list-card:hover .list-thumbnail img {
+            transform: scale(1.05);
+        }
+
+        .list-count {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .list-content {
+            padding: 16px;
+        }
+
+        .list-title {
+            margin: 0 0 8px 0;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .list-meta {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .list-description {
+            margin: 0 0 15px 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .list-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .action-button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+
+        .action-button:hover {
+            background-color: var(--bg-tertiary);
+            color: var(--accent-primary);
+        }
+
+        .action-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        .view-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .view-button:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 0;
+            text-align: center;
+            background-color: var(--bg-secondary);
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            color: var(--text-secondary);
+            opacity: 0.3;
+            margin-bottom: 20px;
+        }
+
+        .empty-title {
+            font-size: 1.5rem;
+            margin: 0 0 10px 0;
+            color: var(--text-primary);
+        }
+
+        .empty-description {
+            color: var(--text-secondary);
+            max-width: 400px;
+            margin: 0 0 25px 0;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: var(--card-shadow);
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .modal-close:hover {
+            background-color: var(--bg-tertiary);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-group input, 
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--input-border);
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .pagination-item {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            margin: 0 5px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination-item:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .pagination-item.active {
+            background-color: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .pagination-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .lists-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-title {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .top-controls {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 10px;
+            }
+            
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .search-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-title">
+                <h1>Your Saved Lists</h1>
+            </div>
+            <div class="top-controls">
+                <div class="theme-toggle-container">
+                    <div class="theme-icon sun-icon" aria-hidden="true"></div>
+                    <div id="theme-toggle" title="Toggle dark mode"></div>
+                    <div class="theme-icon moon-icon" aria-hidden="true"></div>
+                </div>
+                <div class="user-menu">
+                    <div class="avatar">J</div>
+                    <span class="username">John Doe</span>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item">Profile Settings</div>
+                        <div class="dropdown-item">Your Activity</div>
+                        <div class="dropdown-item">Help & Support</div>
+                        <div class="dropdown-item danger">Sign Out</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search your lists...">
+            <button class="button" id="create-list-btn">
+                <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Create New List
+            </button>
+        </div>
+
+        <!-- Empty state (visible when no lists are saved) -->
+        <div class="empty-state" id="empty-state" style="display: none;">
+            <svg class="empty-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="9" x2="15" y2="9"></line>
+                <line x1="9" y1="12" x2="15" y2="12"></line>
+                <line x1="9" y1="15" x2="13" y2="15"></line>
+            </svg>
+            <h2 class="empty-title">No Lists Found</h2>
+            <p class="empty-description">You haven't created any lists yet. Create your first list to start organizing your YouTube videos.</p>
+            <button class="button" id="create-first-list-btn">Create Your First List</button>
+        </div>
+
+        <!-- Lists grid (visible when lists are saved) -->
+        <div class="lists-grid">
+            <!-- List item 1 -->
+            <div class="list-card">
+                <div class="list-thumbnail">
+                    <img src="https://i.ytimg.com/vi/rfscVS0vtbw/maxresdefault.jpg" alt="Python Tutorial">
+                    <div class="list-count">7 videos</div>
+                </div>
+                <div class="list-content">
+                    <h3 class="list-title">Python Learning Resources</h3>
+                    <div class="list-meta">
+                        <span>Created: Apr 15, 2025</span>
+                        <span>Last updated: 2 days ago</span>
+                    </div>
+                    <p class="list-description">A collection of the best Python tutorial videos for beginners. Includes core concepts, exercises and project examples.</p>
+                    <div class="list-actions">
+                        <div>
+                            <button class="action-button" title="Edit list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                                </svg>
+                            </button>
+                            <button class="action-button" title="Share list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                            <button class="action-button" title="Delete list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <a href="#" class="view-button">
+                            <span>View</span>
+                            <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 12h14"></path>
+                                <path d="M12 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List item 2 -->
+            <div class="list-card">
+                <div class="list-thumbnail">
+                    <img src="https://i.ytimg.com/vi/LXb3EKWsInQ/maxresdefault.jpg" alt="Git & GitHub">
+                    <div class="list-count">4 videos</div>
+                </div>
+                <div class="list-content">
+                    <h3 class="list-title">Git & GitHub Basics</h3>
+                    <div class="list-meta">
+                        <span>Created: Mar 28, 2025</span>
+                        <span>Last updated: 1 week ago</span>
+                    </div>
+                    <p class="list-description">Essential Git and GitHub tutorials to understand version control fundamentals. Perfect for beginners in software development.</p>
+                    <div class="list-actions">
+                        <div>
+                            <button class="action-button" title="Edit list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                                </svg>
+                            </button>
+                            <button class="action-button" title="Share list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                            <button class="action-button" title="Delete list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <a href="#" class="view-button">
+                            <span>View</span>
+                            <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 12h14"></path>
+                                <path d="M12 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List item 3 -->
+            <div class="list-card">
+                <div class="list-thumbnail">
+                    <img src="https://i.ytimg.com/vi/b4QIaBMvZqc/maxresdefault.jpg" alt="Jazz Music">
+                    <div class="list-count">12 videos</div>
+                </div>
+                <div class="list-content">
+                    <h3 class="list-title">Jazz & Bossa Nova Playlist</h3>
+                    <div class="list-meta">
+                        <span>Created: Feb 12, 2025</span>
+                        <span>Last updated: 3 days ago</span>
+                    </div>
+                    <p class="list-description">My favorite jazz pieces and performances. Great background music while coding or studying. Includes contemporary jazz fusion.</p>
+                    <div class="list-actions">
+                        <div>
+                            <button class="action-button" title="Edit list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                                </svg>
+                            </button>
+                            <button class="action-button" title="Share list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                            <button class="action-button" title="Delete list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <a href="#" class="view-button">
+                            <span>View</span>
+                            <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 12h14"></path>
+                                <path d="M12 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List item 4 -->
+            <div class="list-card">
+                <div class="list-thumbnail">
+                    <img src="https://i.ytimg.com/vi/fNVa1qMbF9Y/maxresdefault.jpg" alt="GitHub Tutorial">
+                    <div class="list-count">3 videos</div>
+                </div>
+                <div class="list-content">
+                    <h3 class="list-title">Tech Conference Highlights</h3>
+                    <div class="list-meta">
+                        <span>Created: Apr 5, 2025</span>
+                        <span>Last updated: Yesterday</span>
+                    </div>
+                    <p class="list-description">Key talks and presentations from recent tech conferences. Includes AI developments, web frameworks, and security topics.</p>
+                    <div class="list-actions">
+                        <div>
+                            <button class="action-button" title="Edit list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                                </svg>
+                            </button>
+                            <button class="action-button" title="Share list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
+                            <button class="action-button" title="Delete list">
+                                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <a href="#" class="view-button">
+                            <span>View</span>
+                            <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 12h14"></path>
+                                <path d="M12 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <div class="pagination-item disabled">
+                <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"></path>
+                    <path d="M12 19l-7-7 7-7"></path>
+                </svg>
+            </div>
+            <div class="pagination-item active">1</div>
+            <div class="pagination-item">2</div>
+            <div class="pagination-item">3</div>
+            <div class="pagination-item">
+                <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5l7 7-7 7"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create List Modal -->
+    <div class="modal" id="create-list-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New List</h3>
+                <button class="modal-close" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="list-title">List Title</label>
+                    <input type="text" id="list-title" placeholder="Enter list title...">
+                </div>
+                <div class="form-group">
+                    <label for="list-description">Description (optional)</label>
+                    <textarea id="list-description" placeholder="Describe what this list is about..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="list-privacy">Privacy Setting</label>
+                    <select id="list-privacy" class="search-input">
+                        <option value="private">Private - Only you can see this list</option>
+                        <option value="unlisted">Unlisted - Anyone with the link can see this list</option>
+                        <option value="public">Public - Anyone can find and view this list</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="button secondary" id="cancel-create">Cancel</button>
+                <button class="button" id="save-list">Create List</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggling functionality
+        const htmlElement = document.documentElement;
+        const themeToggle = document.getElementById('theme-toggle');
+        
+        // Check for saved theme preference or respect OS preference
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            htmlElement.setAttribute('data-theme', 'dark');
+        }
+        
+        // Toggle theme when the switch is clicked
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            
+            if (currentTheme === 'dark') {
+                htmlElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+            } else {
+                htmlElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+
+        // Modal functionality
+        const modal = document.getElementById('create-list-modal');
+        const createListBtn = document.getElementById('create-list-btn');
+        const createFirstListBtn = document.getElementById('create-first-list-btn');
+        const closeModalBtn = document.getElementById('close-modal');
+        const cancelCreateBtn = document.getElementById('cancel-create');
+        const saveListBtn = document.getElementById('save-list');
+
+        function openModal() {
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        createListBtn.addEventListener('click', openModal);
+        createFirstListBtn?.addEventListener('click', openModal);
+        closeModalBtn.addEventListener('click', closeModal);
+        cancelCreateBtn.addEventListener('click', closeModal);
+
+        // Close modal when clicking outside the modal content
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Save list functionality (mockup)
+        saveListBtn.addEventListener('click', function() {
+            const listTitle = document.getElementById('list-title').value;
+            const listDescription = document.getElementById('list-description').value;
+            
+            if (!listTitle) {
+                alert('Please enter a title for your list');
+                return;
+            }
+            
+            // In a real app, we would save this to a database
+            alert(`List "${listTitle}" created successfully!`);
+            closeModal();
+            
+            // Hide empty state if it's visible
+            const emptyState = document.getElementById('empty-state');
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+        });
+
+        // Toggle between empty state and lists grid for demonstration
+        document.querySelector('.search-input').addEventListener('input', function(e) {
+            const emptyState = document.getElementById('empty-state');
+            const listsGrid = document.querySelector('.lists-grid');
+            
+            if (e.target.value === 'empty') {
+                emptyState.style.display = 'flex';
+                listsGrid.style.display = 'none';
+            } else {
+                emptyState.style.display = 'none';
+                listsGrid.style.display = 'grid';
+            }
+        });
+
+        // Search functionality (mockup)
+        document.querySelector('.search-input').addEventListener('keyup', function(e) {
+            const query = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.list-card');
+            
+            cards.forEach(card => {
+                const title = card.querySelector('.list-title').textContent.toLowerCase();
+                const description = card.querySelector('.list-description').textContent.toLowerCase();
+                
+                if (title.includes(query) || description.includes(query)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // Simulate clicking on "View" to go back to the main app
+        document.querySelectorAll('.view-button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = '../index.html';
+            });
+        });
+
+        // For the sign out functionality in the dropdown
+        document.querySelector('.dropdown-item.danger').addEventListener('click', function() {
+            window.location.href = 'auth-mockup.html';
+        });
+    </script>
+</body>
+</html>
