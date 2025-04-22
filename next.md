@@ -1,3 +1,14 @@
-When I click "Edit links" and add or change something, it creates all the cards again and appends them to the end. That's not what I want. I want to edit, not append.
+* For this we currently get the standard title and the card
+https://www.youtube.com/watch?v=DI-LKs3GpeE&ab_channel=UniversalAGI
 
-Write down what I want to see if you understand it together with an implementation plan on plan.md. Don't change any code yet.
+* if i add it with a title argument, the title should be shown as I enter it
+The syntax is
+[Title]Link
+
+For this, the video title shown before the card is "Video title"
+[Video title]https://www.youtube.com/watch?v=DI-LKs3GpeE&ab_channel=UniversalAGI
+
+* If I add a youtube link with an empty video title, it doesn't show the video's title before the card
+
+For this we get only the card, no title box for this video.
+[]https://www.youtube.com/watch?v=DI-LKs3GpeE&ab_channel=UniversalAGI

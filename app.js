@@ -95,35 +95,79 @@ function resetCardCounter() {
     cardCounter = 1;
 }
 
+// Function to parse link with title in [Title]Link format
+function parseLinkWithTitle(input) {
+    // Check if the input starts with a square bracket
+    if (input.startsWith('[')) {
+        // Find the closing bracket
+        const closingBracketIndex = input.indexOf(']');
+        if (closingBracketIndex !== -1) {
+            // Extract the title and the link
+            const customTitle = input.substring(1, closingBracketIndex);
+            const actualLink = input.substring(closingBracketIndex + 1).trim();
+            
+            return {
+                hasCustomTitle: true,
+                customTitle,
+                link: actualLink,
+                skipTitle: customTitle === '' // If the title is empty, we'll skip showing the title
+            };
+        }
+    }
+    
+    // Return the original link if no custom title format is found
+    return {
+        hasCustomTitle: false,
+        customTitle: null,
+        link: input,
+        skipTitle: false
+    };
+}
+
 // Process links and create cards
 async function processLinks() {
     // Always clear existing content and reset counter when processing links
     linksContainer.innerHTML = '';
     resetCardCounter();
     
-    const links = urlInput.value.split('\n').filter(link => link.trim());
+    const linkInputs = urlInput.value.split('\n').filter(link => link.trim());
     
     // Process each link in the order they were entered
     let lastVideoId = null;
     
-    for (let i = 0; i < links.length; i++) {
-        const link = links[i];
+    for (let i = 0; i < linkInputs.length; i++) {
+        const linkInput = linkInputs[i];
+        
+        // Parse the link to check for a custom title
+        const { hasCustomTitle, customTitle, link, skipTitle } = parseLinkWithTitle(linkInput);
+        
         const { videoId } = extractYouTubeInfo(link);
         
         if (!videoId) continue;
         
-        // Fetch video title
-        const title = await fetchVideoTitle(videoId);
-        
-        // Check if this is a different video from the previous one
+        // Determine if we need to show a video title
         const isNewVideo = videoId !== lastVideoId;
         
         // Only create a title element if this is a different video from the previous one
-        if (isNewVideo) {
+        // and we're not explicitly skipping the title
+        if (isNewVideo && !skipTitle) {
             const titleElement = document.createElement('div');
             titleElement.className = 'video-title';
-            titleElement.textContent = title;
+            
+            // Use the custom title if provided, otherwise fetch from YouTube
+            if (hasCustomTitle && customTitle) {
+                titleElement.textContent = customTitle;
+            } else {
+                // Fetch video title from YouTube
+                const fetchedTitle = await fetchVideoTitle(videoId);
+                titleElement.textContent = fetchedTitle;
+            }
+            
             titleElement.dataset.videoId = videoId; // Store video ID for reference
+            titleElement.dataset.hasCustomTitle = hasCustomTitle.toString();
+            if (hasCustomTitle) {
+                titleElement.dataset.customTitle = customTitle;
+            }
             
             // Add click event to make the title editable
             titleElement.addEventListener('click', makeVideoTitleEditable);
@@ -137,7 +181,12 @@ async function processLinks() {
         // Create card for the link
         const card = document.createElement('div');
         card.className = 'link-card';
-        card.dataset.originalLink = link; // Store original link for editing later
+        
+        // Store the original link input (including custom title if present)
+        card.dataset.originalLink = linkInput;
+        
+        // Store the actual link for playing the video
+        card.dataset.videoLink = link;
         
         // Add card number
         const cardNumberElement = document.createElement('span');
@@ -169,16 +218,16 @@ async function processLinks() {
             // Add active class to clicked card
             card.classList.add('active');
             
-            // Load the video
-            loadVideo(link);
+            // Load the video using the actual link (not the original input with title)
+            loadVideo(card.dataset.videoLink);
         });
         
         linksContainer.appendChild(card);
         
         // If it's the first link and we're starting fresh, load it automatically
-        if (i === 0 && document.querySelectorAll('.link-card').length === links.length) {
+        if (i === 0 && document.querySelectorAll('.link-card').length === linkInputs.length) {
             card.classList.add('active');
-            loadVideo(link);
+            loadVideo(card.dataset.videoLink);
         }
     }
 }
@@ -192,12 +241,13 @@ goButton.addEventListener('click', async () => {
 
 // Helper function to extract current links from cards
 function getCurrentLinksFromCards() {
-    // Get all cards and extract the original links
+    // Get all cards and extract the original links (including custom title syntax)
     const cards = document.querySelectorAll('.link-card');
     const links = [];
     
     cards.forEach(card => {
-        // Get the original link from the data attribute
+        // Get the original link input from the data attribute
+        // This already includes the [Title]Link format if it was entered that way
         if (card.dataset.originalLink) {
             links.push(card.dataset.originalLink);
         }
