@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Youtube Viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="left-panel">
+        <h1>
+            <span class="title-text">Youtube Viewer</span>
+            <div class="theme-toggle-container">
+                <div class="theme-icon sun-icon" aria-hidden="true"></div>
+                <div id="theme-toggle" title="Toggle dark mode"></div>
+                <div class="theme-icon moon-icon" aria-hidden="true"></div>
+            </div>
+        </h1>
+        <h2 class="attribution">
+            built by <a href="https://www.linkedin.com/in/pedro-diniz-619733a2/" target="_blank">Pedro Diniz</a>
+        </h2>
+        <div class="edit-share-container">
+            <button id="new-links-button">Edit Links</button>
+            <button id="share-links-button">Link to share</button>
+        </div>
+        <div class="input-section">
+            <textarea id="url-input" placeholder="Enter multiple YouTube links, one per line"></textarea>
+            <div class="button-container">
+                <button id="go-button">Go!</button>
+                <button id="get-link-button">Link to share</button>
+            </div>
+        </div>
+        <div id="clipboard-feedback">
+            Link copied to clipboard!
+        </div>
+        <div id="links-container"></div>
+    </div>
+    <div id="resizer"></div>
+    <div id="right-panel">
+        <iframe id="viewer" src="about:blank"></iframe>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
