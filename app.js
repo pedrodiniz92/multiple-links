@@ -1694,7 +1694,8 @@ function setupYouTubeLinkButton() {
         }
         
         // Format with [Title]URL syntax if title is provided
-        const formattedLink = title ? `[${title}]${displayUrl}` : displayUrl;
+        // When title is empty string, use [] to indicate no title should be shown
+        const formattedLink = title !== '' ? `[${title}]${displayUrl}` : `[]${displayUrl}`;
         
         // Get current selection
         const selection = quill.getSelection();
