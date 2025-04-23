@@ -103,36 +103,69 @@ function resetCardCounter() {
     cardCounter = 1;
 }
 
-// Function to parse link with title in [Title]Link format
+// Function to parse link with tags [t:Title][c:Context]Link format
 function parseLinkWithTitle(input) {
     // First, fix any HTML entity conversions in URLs
     // This will convert &amp; back to & for URL parameters
     const fixedInput = fixHtmlEntitiesInUrls(input);
     
-    // Check if the input starts with a square bracket
-    if (fixedInput.startsWith('[')) {
-        // Find the closing bracket
+    let link = fixedInput;
+    let customTitle = null;
+    let customContext = null;
+    let hasCustomTitle = false;
+    let hasCustomContext = false;
+    let skipTitle = false;
+    
+    // Regular expressions for detecting tagged components
+    const titleTagRegex = /^\[t:(.*?)\]/;
+    const contextTagRegex = /^\[c:(.*?)\]/;
+    
+    // Check for title tag at beginning of input
+    const titleMatch = fixedInput.match(titleTagRegex);
+    if (titleMatch) {
+        hasCustomTitle = true;
+        customTitle = titleMatch[1]; // Extract content inside [t:...]
+        skipTitle = customTitle === ''; // Skip title if it's empty
+        
+        // Remove the title tag from input
+        link = fixedInput.substring(titleMatch[0].length);
+    }
+    
+    // Check for context tag (either at beginning or after title tag)
+    const contextMatch = link.match(contextTagRegex);
+    if (contextMatch) {
+        hasCustomContext = true;
+        customContext = contextMatch[1]; // Extract content inside [c:...]
+        
+        // Remove the context tag from input
+        link = link.substring(contextMatch[0].length);
+    }
+    
+    // Check for legacy format if no tags were found (for backward compatibility)
+    if (!hasCustomTitle && !hasCustomContext && fixedInput.startsWith('[')) {
         const closingBracketIndex = fixedInput.indexOf(']');
         if (closingBracketIndex !== -1) {
-            // Extract the title and the link
-            const customTitle = fixedInput.substring(1, closingBracketIndex);
-            const actualLink = fixedInput.substring(closingBracketIndex + 1).trim();
-            
-            return {
-                hasCustomTitle: true,
-                customTitle,
-                link: actualLink,
-                skipTitle: customTitle === '' // If the title is empty, we'll skip showing the title
-            };
+            // Check if it's an empty bracket case []
+            if (closingBracketIndex === 1) {
+                // Empty brackets means skip title
+                skipTitle = true;
+                link = fixedInput.substring(closingBracketIndex + 1).trim();
+            } else {
+                hasCustomTitle = true;
+                customTitle = fixedInput.substring(1, closingBracketIndex);
+                link = fixedInput.substring(closingBracketIndex + 1).trim();
+                skipTitle = customTitle === '';
+            }
         }
     }
     
-    // Return the original link if no custom title format is found
     return {
-        hasCustomTitle: false,
-        customTitle: null,
-        link: fixedInput,
-        skipTitle: false
+        hasCustomTitle,
+        customTitle,
+        hasCustomContext,
+        customContext,
+        link,
+        skipTitle
     };
 }
 
@@ -222,8 +255,8 @@ async function processLinks() {
         // Get the current input and normalize any HTML entities in URLs
         const input = fixHtmlEntitiesInUrls(inputs[i]);
         
-        // Parse the input to check for a custom title
-        const { hasCustomTitle, customTitle, link, skipTitle } = parseLinkWithTitle(input);
+        // Parse the input to check for custom title and context
+        const { hasCustomTitle, customTitle, hasCustomContext, customContext, link, skipTitle } = parseLinkWithTitle(input);
         
         // Check if the input contains a URL pattern
         const containsUrl = input.match(/https?:\/\/[^\s]+/);
@@ -296,7 +329,19 @@ async function processLinks() {
         playButtonElement.className = 'card-play-button';
         card.appendChild(playButtonElement);
         
-        // Add card content container
+        // Add content container
+        const cardContentContainer = document.createElement('div');
+        cardContentContainer.className = 'card-content-container';
+        
+        // Add context if present
+        if (hasCustomContext && customContext) {
+            const contextElement = document.createElement('span');
+            contextElement.className = 'card-context';
+            contextElement.textContent = customContext;
+            cardContentContainer.appendChild(contextElement);
+        }
+        
+        // Add main card content (timestamp display)
         const cardContentElement = document.createElement('span');
         cardContentElement.className = 'card-content';
         
@@ -304,7 +349,9 @@ async function processLinks() {
         getFormattedLinkDisplay(link).then(displayText => {
             cardContentElement.textContent = displayText;
         });
-        card.appendChild(cardContentElement);
+        
+        cardContentContainer.appendChild(cardContentElement);
+        card.appendChild(cardContentContainer);
         
         card.addEventListener('click', () => {
             // Remove active class from all cards
@@ -1617,10 +1664,11 @@ function setupYouTubeLinkButton() {
         youtubeModal.style.display = 'none';
     }
     
-    // Function to insert the YouTube link with optional title, start and end times
+    // Function to insert the YouTube link with optional title, context, start and end times
     function insertYouTubeLink() {
         const url = youtubeUrlInput.value.trim();
         const title = youtubeTitleInput.value.trim();
+        const context = document.getElementById('youtube-context').value.trim();
         const startTime = document.getElementById('youtube-start-time').value.trim();
         const endTime = document.getElementById('youtube-end-time').value.trim();
         
@@ -1693,9 +1741,24 @@ function setupYouTubeLinkButton() {
             displayUrl = `https://www.youtube.com/watch?v=${videoId}`;
         }
         
-        // Format with [Title]URL syntax if title is provided
-        // When title is empty string, use [] to indicate no title should be shown
-        const formattedLink = title !== '' ? `[${title}]${displayUrl}` : `[]${displayUrl}`;
+        // Format with tagged syntax [t:Title][c:Context]URL
+        let formattedLink = displayUrl;
+        
+        // For empty title case, use legacy empty brackets to maintain compatibility
+        if (title === '') {
+            formattedLink = `[]${formattedLink}`;
+        }
+        // Add title tag only if title is provided
+        else if (title !== '') {
+            formattedLink = `[t:${title}]${formattedLink}`;
+        }
+        
+        // Add context tag only if context is provided (not empty)
+        if (context !== '') {
+            formattedLink = `[c:${context}]${formattedLink}`;
+        }
+        
+        console.log("Formatted link:", formattedLink); // Debug logging
         
         // Get current selection
         const selection = quill.getSelection();
@@ -1819,8 +1882,10 @@ function setupYouTubeLinkButton() {
                     
                     // Set the title in the input field
                     youtubeTitleInput.value = title;
-                    youtubeTitleInput.focus();
-                    youtubeTitleInput.select();
+                    
+                    // Focus the context field first since it's now between URL and title
+                    const contextInput = document.getElementById('youtube-context');
+                    contextInput.focus();
                     
                     // Show method used (from cache)
                     const cacheKey = `video_title_${videoId}`;
@@ -1903,6 +1968,16 @@ function setupYouTubeLinkButton() {
             } else {
                 insertYouTubeLink();
             }
+        }
+    });
+    
+    // Add event listener for context input
+    const youtubeContextInput = document.getElementById('youtube-context');
+    youtubeContextInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // Move focus to title input
+            youtubeTitleInput.focus();
         }
     });
     
