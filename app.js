@@ -120,43 +120,50 @@ function parseLinkWithTitle(input) {
     const titleTagRegex = /^\[t:(.*?)\]/;
     const contextTagRegex = /^\[c:(.*?)\]/;
     
-    // Check for title tag at beginning of input
-    const titleMatch = fixedInput.match(titleTagRegex);
+    // First check for context tag at beginning of input
+    const contextMatch = fixedInput.match(contextTagRegex);
+    if (contextMatch) {
+        hasCustomContext = true;
+        customContext = contextMatch[1]; // Extract content inside [c:...]
+        
+        // Remove the context tag from input
+        link = fixedInput.substring(contextMatch[0].length);
+    } else {
+        link = fixedInput;
+    }
+    
+    // Check for title tag (either at beginning or after context tag)
+    const titleMatch = link.match(titleTagRegex);
     if (titleMatch) {
         hasCustomTitle = true;
         customTitle = titleMatch[1]; // Extract content inside [t:...]
         skipTitle = customTitle === ''; // Skip title if it's empty
         
         // Remove the title tag from input
-        link = fixedInput.substring(titleMatch[0].length);
+        link = link.substring(titleMatch[0].length);
     }
     
-    // Check for context tag (either at beginning or after title tag)
-    const contextMatch = link.match(contextTagRegex);
-    if (contextMatch) {
-        hasCustomContext = true;
-        customContext = contextMatch[1]; // Extract content inside [c:...]
-        
-        // Remove the context tag from input
-        link = link.substring(contextMatch[0].length);
-    }
-    
-    // Check for legacy format if no tags were found (for backward compatibility)
-    if (!hasCustomTitle && !hasCustomContext && fixedInput.startsWith('[')) {
-        const closingBracketIndex = fixedInput.indexOf(']');
+    // Check for legacy format if no title tag was found (for backward compatibility)
+    if (!hasCustomTitle && link.startsWith('[')) {
+        const closingBracketIndex = link.indexOf(']');
         if (closingBracketIndex !== -1) {
             // Check if it's an empty bracket case []
             if (closingBracketIndex === 1) {
                 // Empty brackets means skip title
                 skipTitle = true;
-                link = fixedInput.substring(closingBracketIndex + 1).trim();
+                link = link.substring(closingBracketIndex + 1).trim();
             } else {
                 hasCustomTitle = true;
-                customTitle = fixedInput.substring(1, closingBracketIndex);
-                link = fixedInput.substring(closingBracketIndex + 1).trim();
+                customTitle = link.substring(1, closingBracketIndex);
+                link = link.substring(closingBracketIndex + 1).trim();
                 skipTitle = customTitle === '';
             }
         }
+    }
+    
+    // If no title tag or legacy title format was found, skip the title
+    if (!hasCustomTitle) {
+        skipTitle = true;
     }
     
     return {
@@ -333,12 +340,16 @@ async function processLinks() {
         const cardContentContainer = document.createElement('div');
         cardContentContainer.className = 'card-content-container';
         
+        // Group for context and content to maintain alignment
+        const contentGroup = document.createElement('div');
+        contentGroup.className = 'content-group';
+        
         // Add context if present
         if (hasCustomContext && customContext) {
             const contextElement = document.createElement('span');
             contextElement.className = 'card-context';
             contextElement.textContent = customContext;
-            cardContentContainer.appendChild(contextElement);
+            contentGroup.appendChild(contextElement);
         }
         
         // Add main card content (timestamp display)
@@ -350,7 +361,8 @@ async function processLinks() {
             cardContentElement.textContent = displayText;
         });
         
-        cardContentContainer.appendChild(cardContentElement);
+        contentGroup.appendChild(cardContentElement);
+        cardContentContainer.appendChild(contentGroup);
         card.appendChild(cardContentContainer);
         
         card.addEventListener('click', () => {
@@ -1744,19 +1756,17 @@ function setupYouTubeLinkButton() {
         // Format with tagged syntax [t:Title][c:Context]URL
         let formattedLink = displayUrl;
         
-        // For empty title case, use legacy empty brackets to maintain compatibility
-        if (title === '') {
-            formattedLink = `[]${formattedLink}`;
-        }
-        // Add title tag only if title is provided
-        else if (title !== '') {
-            formattedLink = `[t:${title}]${formattedLink}`;
-        }
-        
-        // Add context tag only if context is provided (not empty)
+        // Add context tag first if context is provided (not empty)
         if (context !== '') {
             formattedLink = `[c:${context}]${formattedLink}`;
         }
+        
+        // Then handle title (context comes before title in the link)
+        // Only add a title tag if title has actual content
+        if (title !== '') {
+            formattedLink = `[t:${title}]${formattedLink}`;
+        }
+        // No empty brackets - if there's no [t:] tag, it means no title should be shown
         
         console.log("Formatted link:", formattedLink); // Debug logging
         
