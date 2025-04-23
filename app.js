@@ -124,7 +124,8 @@ function parseLinkWithTitle(input) {
     const contextMatch = fixedInput.match(contextTagRegex);
     if (contextMatch) {
         hasCustomContext = true;
-        customContext = contextMatch[1]; // Extract content inside [c:...]
+        // Replace // with line breaks in context
+        customContext = contextMatch[1].replace(/\/\//g, '\n'); // Extract content inside [c:...] and replace // with line breaks
         
         // Remove the context tag from input
         link = fixedInput.substring(contextMatch[0].length);
@@ -348,7 +349,8 @@ async function processLinks() {
         if (hasCustomContext && customContext) {
             const contextElement = document.createElement('span');
             contextElement.className = 'card-context';
-            contextElement.textContent = customContext;
+            // Use innerHTML to properly render line breaks
+            contextElement.innerHTML = customContext.replace(/\n/g, '<br>');
             contentGroup.appendChild(contextElement);
         }
         
