@@ -30,7 +30,7 @@ But this isn't happening to our icon bar. In dark mode, they're barely visible. 
 **created sign up and sign in buttons
 
 
-## TO DO - You need to do what is listed here
+## DONE - You need to do what is listed here
 
-I want the "sign up" text to be blue.
-"Sign up" and "Sign in" - upon hover, we get a background in the same style of the icons.
+I want the "sign up" text to be blue. ✓
+"Sign up" and "Sign in" - upon hover, we get a background in the same style of the icons. ✓

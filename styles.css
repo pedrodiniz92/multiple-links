@@ -175,6 +175,16 @@ h1 .title-text {
     box-shadow: 0 0 0 2px rgba(77, 97, 252, 0.2);
 }
 
+#editor-toolbar {
+    display: flex;
+    justify-content: center;
+}
+
+.ql-formats {
+    display: inline-flex;
+    justify-content: center;
+}
+
 #rich-editor {
     height: 120px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -186,6 +196,7 @@ h1 .title-text {
     border-bottom: 1px solid var(--input-border);
     padding: 6px;
     background-color: var(--bg-tertiary);
+    text-align: center;
 }
 
 .ql-container.ql-snow {
