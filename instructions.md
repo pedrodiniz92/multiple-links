@@ -1,1 +1,0 @@
-Make it so that if I click the title of the video above the cards, I can edit it. Some videos have unnecessarily long names, but I want to give the user power to choose how it's shown.
