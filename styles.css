@@ -111,13 +111,26 @@ body {
     border-radius: 2px;
 }
 
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Align to top to match the title */
+    width: 100%;
+    margin-bottom: 0.5rem; /* Reduced from 1rem to 0.5rem */
+}
+
+.title-container {
+    display: flex;
+    flex-direction: column;
+}
+
 h1 {
     margin-top: 0;
     margin-bottom: 0.7rem; /* Reduced to make attribution closer */
     font-weight: 600;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     flex-wrap: nowrap;
     width: 100%;
 }
@@ -526,7 +539,7 @@ iframe {
 /* Attribution styles */
 .attribution {
     margin-top: -0.4rem;  /* Closer to the title */
-    margin-bottom: 1.5rem; /* Larger margin below */
+    margin-bottom: 0.75rem; /* Reduced to half (from 1.5rem to 0.75rem) */
     font-size: 0.9rem; 
     font-weight: 400; 
     color: var(--text-secondary);
@@ -547,13 +560,17 @@ iframe {
 .toolbar-container {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 0.75rem;
     margin-bottom: 1.2rem;
     background-color: var(--bg-tertiary);
     border-radius: 8px;
-    padding: 10px;
+    padding: 0.6rem;
     border: 1px solid var(--border-color);
     transition: background-color 0.3s, border-color 0.3s;
+    width: 100%;
+    min-width: 0;
 }
 
 /* Adjust toolbar in dark mode to match Quill */
@@ -564,7 +581,11 @@ iframe {
 
 .toolbar-group {
     display: flex;
-    gap: 8px;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: visible;
 }
 
 .toolbar-separator {
@@ -572,7 +593,8 @@ iframe {
     height: 24px;
     background-color: var(--text-secondary);
     opacity: 0.25;
-    margin: 0 4px;
+    margin: 0 0.25rem;
+    align-self: center;
     transition: background-color 0.3s, opacity 0.3s;
 }
 
@@ -585,15 +607,19 @@ iframe {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: clamp(28px, calc(24px + 1.2vw), 40px);
+    height: clamp(28px, calc(24px + 1.2vw), 40px);
     border-radius: 6px;
     background-color: transparent;
     border: 1px solid transparent;
     cursor: pointer;
     padding: 0;
+    flex-shrink: 1;
     transition: all 0.2s ease, background-color 0.3s, border-color 0.3s;
 }
+
+/* Styles for toolbar icon sizes are now controlled by JavaScript 
+   to ensure gradual resizing across all browsers */
 
 /* Light mode hover state - gray background without border */
 .toolbar-icon:hover {
@@ -612,8 +638,8 @@ iframe {
 }
 
 .toolbar-icon img {
-    width: 20px;
-    height: 20px;
+    width: clamp(16px, calc(14px + 0.7vw), 22px);
+    height: clamp(16px, calc(14px + 0.7vw), 22px);
     opacity: 0.75;
     transition: opacity 0.2s, filter 0.3s;
     filter: invert(0);
@@ -667,15 +693,15 @@ iframe {
 .custom-tooltip {
     visibility: hidden;
     position: absolute;
-    bottom: -38px;
+    bottom: -32px;
     left: 50%;
     transform: translateX(-50%);
     background-color: rgba(0, 0, 0, 0.85);
     color: white;
     text-align: center;
-    padding: 8px 14px;
+    padding: 5px 10px;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: clamp(10px, 0.75vw, 12px);
     white-space: nowrap;
     opacity: 0;
     transition: opacity 0.2s, visibility 0.2s;
@@ -685,6 +711,9 @@ iframe {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     pointer-events: none; /* Prevent tooltip from interfering with hover */
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Tooltip arrow */
@@ -723,8 +752,8 @@ iframe {
     left: 50%;
     transform: translate(-50%, -50%);
     transition: opacity 0.3s ease;
-    width: 20px;
-    height: 20px;
+    width: clamp(16px, calc(14px + 0.7vw), 22px);
+    height: clamp(16px, calc(14px + 0.7vw), 22px);
 }
 
 /* Override styles for theme icons to ensure visibility */
@@ -881,6 +910,42 @@ iframe {
         flex-direction: column;
         gap: 5px;
     }
+    
+    .toolbar-container {
+        padding: 0.5rem;
+        gap: 0.5rem;
+        justify-content: flex-start;
+    }
+    
+    .toolbar-group {
+        justify-content: flex-start;
+    }
+    
+    .toolbar-separator {
+        height: 20px;
+    }
+}
+
+/* Only allow wrapping at extremely narrow widths */
+@media (max-width: 350px) {
+    .toolbar-container,
+    .toolbar-group {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 400px) {
+    .toolbar-icon {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .toolbar-icon img, 
+    .theme-icon-light, 
+    .theme-icon-dark {
+        width: 16px;
+        height: 16px;
+    }
 }
 
 .primary-button {
@@ -938,4 +1003,74 @@ iframe {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--text-secondary);
+}
+
+/* Auth links styling */
+.auth-links {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-top: 0.7rem; /* Align with "Watch it!" */
+}
+
+/* Base styles for both links */
+.auth-links a {
+    text-decoration: none;
+    opacity: 0.85;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+    position: relative;
+    font-weight: 500;
+    border-radius: 6px;
+}
+
+/* Sign in link (gray by default) */
+.auth-links a:first-child {
+    color: var(--text-secondary);
+    margin-right: 0.5rem;
+}
+
+/* Sign up link (blue by default) */
+.auth-links a:last-child {
+    color: var(--accent-primary);
+}
+
+/* Hover style for Sign in - gray background */
+.auth-links a:first-child:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Hover style for Sign up - blue background */
+.auth-links a:last-child:hover {
+    opacity: 1;
+    background-color: rgba(59, 130, 246, 0.1);
+    color: var(--accent-primary);
+}
+
+/* Dark mode hover styles */
+[data-theme="dark"] .auth-links a:first-child:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .auth-links a:last-child:hover {
+    background-color: rgba(96, 165, 250, 0.15);
+}
+
+/* Add a subtle divider between the links */
+.auth-links a:first-child {
+    position: relative;
+}
+
+.auth-links a:first-child::after {
+    content: "";
+    position: absolute;
+    right: -0.3rem;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 0.8rem;
+    width: 1px;
+    background-color: var(--text-secondary);
+    opacity: 0.4;
 }

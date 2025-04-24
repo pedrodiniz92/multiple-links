@@ -26,7 +26,11 @@ It is VERY important that:
 But this isn't happening to our icon bar. In dark mode, they're barely visible. Can we give them a treatment like the quill items?
 
 **added custom tooltips
+**made the youtube link in quill more visible in dark more.
+**created sign up and sign in buttons
+
 
 ## TO DO - You need to do what is listed here
 
-In dark mode, the youtube icon inside quill looks to dark and barely visible. Can we invert its colors when dark mode is on?
+I want the "sign up" text to be blue.
+"Sign up" and "Sign in" - upon hover, we get a background in the same style of the icons.

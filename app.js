@@ -42,6 +42,13 @@ document.addEventListener('mousemove', (e) => {
     
     leftPanel.style.width = `${newLeftPanelWidth}%`;
     rightPanel.style.width = `${100 - newLeftPanelWidth}%`;
+    
+    // Update toolbar icon sizes during resizing - use requestAnimationFrame for smoother updates
+    if (typeof updateIconSizes === 'function') {
+        requestAnimationFrame(updateIconSizes);
+    } else if (typeof initResponsiveToolbar === 'function') {
+        initResponsiveToolbar();
+    }
 });
 
 // Toggle input section visibility
@@ -2091,6 +2098,109 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Global reference for the update function
+let updateIconSizes;
+
+// Responsive toolbar icons
+function initResponsiveToolbar() {
+    const toolbar = document.querySelector('.toolbar-container');
+    const toolbarIcons = document.querySelectorAll('.toolbar-icon');
+    const iconImages = document.querySelectorAll('.toolbar-icon img, .theme-icon-light, .theme-icon-dark');
+    
+    // Default sizes
+    const defaultIconSize = 36; // px
+    const defaultImageSize = 20; // px
+    const minScale = 0.85; // Minimum scaling factor (85%)
+    
+    // For smoother transitions, keep track of the current scale
+    let currentScaleFactor = 1;
+    let animationFrameId = null;
+    
+    // Define the update function globally so we can access it directly during resizing
+    updateIconSizes = function() {
+        if (!toolbar) return;
+        
+        // Cancel any pending animation frame
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+        
+        // Use requestAnimationFrame for smoother updates
+        animationFrameId = requestAnimationFrame(() => {
+            const containerWidth = toolbar.offsetWidth;
+            const numIcons = toolbarIcons.length;
+            
+            // Calculate available width per icon (accounting for gap and padding)
+            const availableWidth = containerWidth - 20; // subtracting approximate padding
+            const idealWidth = (availableWidth / numIcons) - 12; // subtracting gap between icons
+            
+            // Calculate target scale factor, ensuring we don't go below minScale
+            let targetScaleFactor = 1; // Default = 100%
+            if (idealWidth < defaultIconSize) {
+                // Calculate scale factor between 85% and 100% based on available width
+                const iconWidth = Math.max(defaultIconSize * minScale, idealWidth);
+                targetScaleFactor = iconWidth / defaultIconSize;
+            }
+            
+            // Smooth transition between scale factors (interpolate for smoothness)
+            currentScaleFactor = currentScaleFactor * 0.8 + targetScaleFactor * 0.2;
+            
+            // Apply scaling to icons with subtle easing
+            toolbarIcons.forEach(icon => {
+                const size = Math.floor(defaultIconSize * currentScaleFactor);
+                icon.style.width = `${size}px`;
+                icon.style.height = `${size}px`;
+            });
+            
+            // Apply scaling to images
+            iconImages.forEach(img => {
+                const size = Math.floor(defaultImageSize * currentScaleFactor);
+                img.style.width = `${size}px`;
+                img.style.height = `${size}px`;
+            });
+            
+            // Adjust gap if needed
+            if (currentScaleFactor < 0.95) {
+                toolbar.style.gap = "0.5rem";
+                document.querySelectorAll('.toolbar-group').forEach(group => {
+                    group.style.gap = "0.4rem";
+                });
+            } else {
+                toolbar.style.gap = "0.75rem";
+                document.querySelectorAll('.toolbar-group').forEach(group => {
+                    group.style.gap = "0.5rem";
+                });
+            }
+            
+            // Clear animation frame ID
+            animationFrameId = null;
+        });
+    };
+    
+    // Update sizes on load and resize
+    updateIconSizes();
+    
+    // Throttled resize handler
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(updateIconSizes, 50);
+    });
+    
+    // Add resize observer for more accurate tracking of toolbar size changes
+    if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                if (entry.target === toolbar) {
+                    updateIconSizes();
+                }
+            }
+        });
+        
+        resizeObserver.observe(toolbar);
+    }
+}
+
 // Execute on page load
 window.addEventListener('load', function() {
     // Initialize the rich text editor
@@ -2098,4 +2208,21 @@ window.addEventListener('load', function() {
     
     // Parse URL parameters if present
     parseUrlParams();
+    
+    // Initialize responsive toolbar
+    initResponsiveToolbar();
+    
+    // Also update when panel is resized (using the mouseup event)
+    const resizer = document.getElementById('resizer');
+    if (resizer) {
+        resizer.addEventListener('mouseup', function() {
+            // Update immediately and also after a small delay to catch any layout changes
+            if (typeof updateIconSizes === 'function') {
+                updateIconSizes();
+                
+                // Additional update after layout settles
+                setTimeout(updateIconSizes, 100);
+            }
+        });
+    }
 });
