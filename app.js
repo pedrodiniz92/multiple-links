@@ -1548,6 +1548,11 @@ themeToggleIcon.addEventListener('click', toggleTheme);
 // Initialize tooltip on page load
 updateThemeToggleTooltip();
 
+// Ensure tooltip text is correct after DOM is completely loaded
+document.addEventListener('DOMContentLoaded', function() {
+    updateThemeToggleTooltip();
+});
+
 // Function to make a video title editable
 function makeVideoTitleEditable(event) {
     const titleElement = event.currentTarget;

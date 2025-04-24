@@ -638,9 +638,15 @@ iframe {
     filter: invert(1) !important;
 }
 
-/* Ensure theme tooltip for dark/light mode is visible */
+/* Special handling for theme toggle icon tooltip */
+#theme-toggle-icon {
+    position: relative;
+    overflow: visible !important;
+}
+
 #theme-toggle-icon .theme-tooltip {
-    position: absolute;
+    /* No additional special styling needed anymore,
+       using the standard tooltip styles */
 }
 
 /* Custom tooltip styling */
@@ -668,6 +674,7 @@ iframe {
     letter-spacing: 0.2px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    pointer-events: none; /* Prevent tooltip from interfering with hover */
 }
 
 /* Tooltip arrow */
@@ -720,10 +727,7 @@ iframe {
     opacity: 1 !important;
 }
 
-#theme-toggle-icon {
-    position: relative;
-    overflow: hidden;
-}
+/* Duplicate definition removed - now handled above */
 
 /* Default state (light mode): show moon icon (dark mode option) */
 .theme-icon-light {
