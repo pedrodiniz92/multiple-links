@@ -129,7 +129,7 @@ function resetCardCounter() {
     cardCounter = 1;
 }
 
-// Function to parse link with tags [t:Title][c:Context]Link format
+// Function to parse link with tags [t:Title][c:Context]Link format or [c:Context][t:Title]Link format
 function parseLinkWithTitle(input) {
     // First, fix any HTML entity conversions in URLs
     // This will convert &amp; back to & for URL parameters
@@ -143,50 +143,70 @@ function parseLinkWithTitle(input) {
     let skipTitle = false;
     
     // Regular expressions for detecting tagged components
-    const titleTagRegex = /^\[t:(.*?)\]/;
-    const contextTagRegex = /^\[c:(.*?)\]/;
+    const titleTagRegex = /\[t:(.*?)\]/;
+    const contextTagRegex = /\[c:(.*?)\]/;
     
-    // First check for context tag at beginning of input
-    const contextMatch = fixedInput.match(contextTagRegex);
-    if (contextMatch) {
-        hasCustomContext = true;
-        // Replace // with line breaks in context
-        customContext = contextMatch[1].replace(/\/\//g, '\n'); // Extract content inside [c:...] and replace // with line breaks
-        
-        // Remove the context tag from input
-        link = fixedInput.substring(contextMatch[0].length);
-    } else {
-        link = fixedInput;
-    }
+    // Process both tags in any order by iteratively checking for them
+    // This allows for [t:Title][c:Context]Link or [c:Context][t:Title]Link
+    let currentLink = fixedInput;
+    let foundTag = true;
     
-    // Check for title tag (either at beginning or after context tag)
-    const titleMatch = link.match(titleTagRegex);
-    if (titleMatch) {
-        hasCustomTitle = true;
-        customTitle = titleMatch[1]; // Extract content inside [t:...]
-        skipTitle = customTitle === ''; // Skip title if it's empty
-        
-        // Remove the title tag from input
-        link = link.substring(titleMatch[0].length);
-    }
-    
-    // Check for legacy format if no title tag was found (for backward compatibility)
-    if (!hasCustomTitle && link.startsWith('[')) {
-        const closingBracketIndex = link.indexOf(']');
-        if (closingBracketIndex !== -1) {
-            // Check if it's an empty bracket case []
-            if (closingBracketIndex === 1) {
-                // Empty brackets means skip title
-                skipTitle = true;
-                link = link.substring(closingBracketIndex + 1).trim();
-            } else {
-                hasCustomTitle = true;
-                customTitle = link.substring(1, closingBracketIndex);
-                link = link.substring(closingBracketIndex + 1).trim();
-                skipTitle = customTitle === '';
+    // Keep checking for tags until no more are found at the beginning of the string
+    while (foundTag && currentLink.startsWith('[')) {
+        // Check for context tag
+        if (currentLink.startsWith('[c:')) {
+            const contextMatch = currentLink.match(contextTagRegex);
+            if (contextMatch) {
+                hasCustomContext = true;
+                // Replace // with line breaks in context
+                customContext = contextMatch[1].replace(/\/\//g, '\n');
+                // Remove the context tag from input
+                currentLink = currentLink.substring(contextMatch[0].length);
+                // Continue looking for more tags
+                continue;
             }
         }
+        
+        // Check for title tag
+        if (currentLink.startsWith('[t:')) {
+            const titleMatch = currentLink.match(titleTagRegex);
+            if (titleMatch) {
+                hasCustomTitle = true;
+                customTitle = titleMatch[1];
+                skipTitle = customTitle === ''; // Skip title if it's empty
+                // Remove the title tag from input
+                currentLink = currentLink.substring(titleMatch[0].length);
+                // Continue looking for more tags
+                continue;
+            }
+        }
+        
+        // Check for legacy format (for backward compatibility)
+        if (currentLink.startsWith('[') && !currentLink.startsWith('[c:') && !currentLink.startsWith('[t:')) {
+            const closingBracketIndex = currentLink.indexOf(']');
+            if (closingBracketIndex !== -1) {
+                // Check if it's an empty bracket case []
+                if (closingBracketIndex === 1) {
+                    // Empty brackets means skip title
+                    skipTitle = true;
+                    currentLink = currentLink.substring(closingBracketIndex + 1).trim();
+                } else {
+                    hasCustomTitle = true;
+                    customTitle = currentLink.substring(1, closingBracketIndex);
+                    currentLink = currentLink.substring(closingBracketIndex + 1).trim();
+                    skipTitle = customTitle === '';
+                }
+                // Legacy format processed, stop looking for more tags
+                break;
+            }
+        }
+        
+        // If we got here, no valid tag was found, exit the loop
+        foundTag = false;
     }
+    
+    // Update link to the current state after processing all tags
+    link = currentLink;
     
     // If no title tag or legacy title format was found, skip the title
     if (!hasCustomTitle) {
