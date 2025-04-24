@@ -5,7 +5,7 @@ const rightPanel = document.getElementById('right-panel');
 const goButton = document.getElementById('go-button');
 const linksContainer = document.getElementById('links-container');
 const viewer = document.getElementById('viewer');
-// Share buttons have been removed, using only the share icon now
+// Theme and UI elements
 const clipboardFeedback = document.getElementById('clipboard-feedback');
 const themeToggleIcon = document.getElementById('theme-toggle-icon');
 const htmlElement = document.documentElement;
@@ -44,11 +44,7 @@ document.addEventListener('mousemove', (e) => {
     rightPanel.style.width = `${100 - newLeftPanelWidth}%`;
     
     // Update toolbar icon sizes during resizing - use requestAnimationFrame for smoother updates
-    if (typeof updateIconSizes === 'function') {
-        requestAnimationFrame(updateIconSizes);
-    } else if (typeof initResponsiveToolbar === 'function') {
-        initResponsiveToolbar();
-    }
+    requestAnimationFrame(updateIconSizes);
 });
 
 // Toggle input section visibility
@@ -89,12 +85,40 @@ function generateShareableUrl() {
     return `${window.location.origin}${window.location.pathname}?urls=${encodedLinks}`;
 }
 
-// Show the clipboard feedback message temporarily
+// Generic function to show feedback messages with animations
+function showFeedbackMessage(element, isModal = false) {
+    // Reset animation and set display to block
+    element.style.display = 'block';
+    
+    // Remove any existing animation
+    element.style.animation = 'none';
+    
+    // Force reflow to make sure the animation restart works
+    void element.offsetWidth;
+    
+    // Apply different animations based on the type of feedback
+    if (isModal) {
+        // For modal feedback (appears at the top of the modal)
+        element.style.animation = 'modalFeedbackIn 0.3s ease forwards, modalFeedbackOut 0.3s ease 1.8s forwards';
+        
+        // Hide the element after animations complete - using shorter duration for modal
+        setTimeout(() => {
+            element.style.display = 'none';
+        }, 2400); // Total animation time: 0.3s in + 1.8s delay + 0.3s out
+    } else {
+        // For global feedback (appears at the top of the page)
+        element.style.animation = 'fadeIn 0.4s ease forwards, fadeOut 0.4s ease 2s forwards';
+        
+        // Hide the element after animations complete
+        setTimeout(() => {
+            element.style.display = 'none';
+        }, 2800); // Total animation time: 0.4s in + 2s delay + 0.4s out
+    }
+}
+
+// Show the clipboard feedback message temporarily with animations
 function showClipboardFeedback() {
-    clipboardFeedback.style.display = 'block';
-    setTimeout(() => {
-        clipboardFeedback.style.display = 'none';
-    }, 2000);
+    showFeedbackMessage(clipboardFeedback);
 }
 
 // Global counter for card numbers
@@ -429,7 +453,7 @@ function getCurrentLinksFromCards() {
     return contents;
 }
 
-// Edit links button has been removed, functionality moved to edit-text-icon
+// Helper functions for UI interactions
 
 // Function to copy shareable link to clipboard
 function copyShareableLink() {
@@ -710,26 +734,12 @@ async function getVideoDuration(videoId) {
     if (cachedInfo) {
         try {
             const parsedInfo = JSON.parse(cachedInfo);
-            console.log(`Found in localStorage: ${parsedInfo.duration} seconds (method: ${parsedInfo.method || 'unknown'})`);
-            
-            // If the cached info is from a reliable method, use it directly
-            // Otherwise, continue with fetching if it's an estimate and older than 7 days
-            const isEstimate = parsedInfo.method && 
-                (parsedInfo.method.includes('estimate') || 
-                 parsedInfo.method === 'Generated estimate');
-            
-            const isOld = parsedInfo.timestamp && 
-                (Date.now() - parsedInfo.timestamp > 7 * 24 * 60 * 60 * 1000);
-                
-            if (!isEstimate || !isOld) {
+            if (parsedInfo.duration && parsedInfo.method && !parsedInfo.method.includes('estimate')) {
+                console.log(`Found in localStorage: ${parsedInfo.duration} seconds (method: ${parsedInfo.method || 'unknown'})`);
                 return parsedInfo.duration;
             }
-            
-            console.log('Cached info is an old estimate, trying to get more accurate data...');
-            // Continue with other methods to try to get more accurate data
         } catch (e) {
             console.warn('Error parsing cached info:', e);
-            // Continue with other methods if parsing fails
         }
     }
     
@@ -887,9 +897,7 @@ async function getVideoDuration(videoId) {
         console.warn('Error fetching video information:', error);
     }
     
-    // Method 4: Try intelligent fallbacks for specific videos or types
-    
-    // Known video durations - expanded list including the GitHub tutorial
+    // Method 4: Check for known videos
     const knownVideos = {
         'fNVa1qMbF9Y': { duration: 665, title: 'GitHub Tutorial - Beginner\'s Training Guide' }, // 11:05
         'hCbLWG_0icQ': { duration: 1465, title: 'Python Classes Tutorial' }, // 24:25
@@ -910,92 +918,9 @@ async function getVideoDuration(videoId) {
         return duration;
     }
     
-    // Educational content estimate - typically longer videos
-    // This includes coding tutorials, lectures, documentation, etc.
-    if (
-        videoId.startsWith('L') || 
-        videoId.startsWith('f') || 
-        videoId.startsWith('r') || 
-        videoId.startsWith('h') || 
-        videoId.startsWith('t') || 
-        videoId.startsWith('D') || 
-        videoId.startsWith('C')
-    ) {
-        // More variance for educational content (10-30 min)
-        const baseMinutes = 10;
-        const addedMinutes = Math.floor(videoId.charCodeAt(1) % 20);
-        const duration = (baseMinutes + addedMinutes) * 60;
-        
-        console.log(`Educational content estimate: ${duration} seconds (${Math.floor(duration/60)} minutes)`);
-        localStorage.setItem(cacheKey, JSON.stringify({
-            duration: duration,
-            method: 'Educational content estimate',
-            timestamp: Date.now()
-        }));
-        return duration;
-    }
-    
-    // Music video estimate - typically 3-5 minutes
-    if (
-        videoId.startsWith('d') || 
-        videoId.startsWith('9') || 
-        videoId.startsWith('_') || 
-        videoId.startsWith('M') || 
-        videoId.startsWith('v') || 
-        videoId.startsWith('y')
-    ) {
-        // Small variance for music videos (3-5 min)
-        const baseSeconds = 180;
-        const addedSeconds = videoId.charCodeAt(1) % 120;
-        const duration = baseSeconds + addedSeconds;
-        
-        console.log(`Music video estimate: ${duration} seconds (${Math.floor(duration/60)}:${(duration%60).toString().padStart(2, '0')})`);
-        localStorage.setItem(cacheKey, JSON.stringify({
-            duration: duration,
-            method: 'Music video estimate',
-            timestamp: Date.now()
-        }));
-        return duration;
-    }
-    
-    // Short form content estimate (15 sec - 2 min)
-    if (
-        videoId.startsWith('s') || 
-        videoId.startsWith('S') || 
-        videoId.startsWith('1') || 
-        videoId.startsWith('2') || 
-        videoId.startsWith('Z')
-    ) {
-        const duration = 15 + (videoId.charCodeAt(0) + videoId.charCodeAt(1)) % 105;
-        console.log(`Short-form content estimate: ${duration} seconds`);
-        localStorage.setItem(cacheKey, JSON.stringify({
-            duration: duration,
-            method: 'Short-form content estimate',
-            timestamp: Date.now()
-        }));
-        return duration;
-    }
-    
-    // Generate semi-random duration based on video ID
-    // Use multiple characters from the ID to create more variability
-    const firstChar = videoId.charAt(0);
-    const secondChar = videoId.charAt(1);
-    const thirdChar = videoId.charAt(2);
-    
-    const asciiSum = firstChar.charCodeAt(0) + 
-                    secondChar.charCodeAt(0) + 
-                    thirdChar.charCodeAt(0);
-    
-    // Generate duration between 3-15 minutes based on ID characters
-    const duration = 180 + (asciiSum % 720);
-    
-    console.log(`Generated duration estimate: ${duration} seconds (${Math.floor(duration/60)}:${(duration%60).toString().padStart(2, '0')})`);
-    localStorage.setItem(cacheKey, JSON.stringify({
-        duration: duration,
-        method: 'Generated estimate',
-        timestamp: Date.now()
-    }));
-    return duration;
+    // If we couldn't get duration through any method, return null
+    console.log('No reliable duration found, returning null');
+    return null;
 }
 
 // Function to get a formatted display for a YouTube link
@@ -1022,18 +947,20 @@ async function getFormattedLinkDisplay(url) {
             // Format end time if it exists
             if (params.end) {
                 displayText += formatTime(params.end);
+            } else {
+                displayText += 'end';
             }
             
             return displayText;
         }
         
-        // If no time parameters, show full video duration
+        // If no time parameters, show full video duration if available, otherwise just "Full video"
         const duration = await getVideoDuration(videoId);
-        return `0:00 - ${formatTime(duration)}`;
+        return duration ? `0:00 - ${formatTime(duration)}` : 'Full video';
     } catch (error) {
-        // In case of any errors, just return the URL
+        // In case of any errors, just return "Full video"
         console.error('Error formatting link display:', error);
-        return url;
+        return 'Full video';
     }
 }
 
@@ -1658,7 +1585,7 @@ function initRichTextEditor() {
         modules: {
             toolbar: '#editor-toolbar'
         },
-        placeholder: 'Enter YouTube links or text...'
+        placeholder: 'Enter YouTube links or text.\n\nClick the YouTube button above for more options.'
     });
     
     // Sync Quill content to the hidden textarea
@@ -1679,7 +1606,6 @@ function setupYouTubeLinkButton() {
     // Get modal elements
     const addYouTubeBtn = document.getElementById('add-youtube-link');
     const youtubeModal = document.getElementById('add-youtube-modal');
-    const closeModalBtn = document.getElementById('close-youtube-modal');
     const fetchTitleBtn = document.getElementById('fetch-youtube-title-btn');
     const insertLinkBtn = document.getElementById('insert-youtube-link-btn');
     const cancelBtn = document.getElementById('cancel-youtube-link-btn');
@@ -1704,6 +1630,41 @@ function setupYouTubeLinkButton() {
         
         // Focus the URL input
         setTimeout(() => youtubeUrlInput.focus(), 50);
+        
+        // Set up Line Break button functionality
+        const lineBreakBtn = document.getElementById('add-linebreak-btn');
+        const contextInput = document.getElementById('youtube-context');
+        
+        if (lineBreakBtn && contextInput) {
+            // Remove existing event listeners to avoid duplicates
+            lineBreakBtn.replaceWith(lineBreakBtn.cloneNode(true));
+            
+            // Get the fresh reference
+            const freshLineBreakBtn = document.getElementById('add-linebreak-btn');
+            
+            // Add event listener
+            freshLineBreakBtn.addEventListener('click', function() {
+                // If the context input has focus, insert // at the cursor position
+                if (document.activeElement === contextInput) {
+                    const cursorPos = contextInput.selectionStart;
+                    const textBefore = contextInput.value.substring(0, cursorPos);
+                    const textAfter = contextInput.value.substring(cursorPos);
+                    
+                    // Insert // at cursor position
+                    contextInput.value = textBefore + '//' + textAfter;
+                    
+                    // Move cursor after the inserted text
+                    contextInput.selectionStart = cursorPos + 2;
+                    contextInput.selectionEnd = cursorPos + 2;
+                } else {
+                    // Otherwise, add // at the end of the context input
+                    contextInput.value += '//';
+                }
+                
+                // Focus the context input after adding the line break
+                contextInput.focus();
+            });
+        }
     }
     
     // Function to hide the modal
@@ -1882,21 +1843,30 @@ function setupYouTubeLinkButton() {
         }
         
         if (!isYouTubeUrl(url)) {
-            alert('Please enter a valid YouTube URL');
+            // Show error feedback in the modal
+            const modalFeedback = document.getElementById('modal-title-feedback');
+            modalFeedback.textContent = 'Please enter a valid YouTube URL';
+            modalFeedback.style.backgroundColor = 'rgba(254, 242, 242, 0.98)'; // Light red
+            modalFeedback.style.color = '#991b1b'; // Dark red
+            
+            // Show the feedback with animation
+            showFeedbackMessage(modalFeedback, true);
+            
+            // Reset styling after animation completes
+            setTimeout(() => {
+                modalFeedback.style.backgroundColor = 'rgba(236, 253, 241, 0.98)';
+                modalFeedback.style.color = '#0c652f';
+            }, 2500);
+            
             return;
         }
         
-        // Create status message
-        const statusElement = document.createElement('div');
-        statusElement.className = 'status-message';
-        statusElement.textContent = 'Fetching title...';
-        statusElement.style.color = 'var(--accent-primary)';
-        statusElement.style.fontSize = '12px';
-        statusElement.style.marginTop = '4px';
-        
-        // Add the status message below the URL input
-        const urlInputParent = youtubeUrlInput.parentElement;
-        urlInputParent.appendChild(statusElement);
+        // Show feedback that we're fetching
+        const modalFeedback = document.getElementById('modal-title-feedback');
+        modalFeedback.textContent = 'Fetching title...';
+        modalFeedback.style.backgroundColor = 'rgba(236, 253, 241, 0.98)'; // Default color
+        modalFeedback.style.color = '#0c652f'; // Default color
+        showFeedbackMessage(modalFeedback, true);
         
         // Disable the button while fetching
         fetchTitleBtn.disabled = true;
@@ -1907,7 +1877,8 @@ function setupYouTubeLinkButton() {
             const { videoId } = extractYouTubeInfo(url);
             
             if (videoId) {
-                statusElement.textContent = `Fetching title for video ID: ${videoId}...`;
+                // Update the feedback message
+                modalFeedback.textContent = `Fetching title for video ID: ${videoId}...`;
                 
                 try {
                     // Use our improved fetchVideoTitle function
@@ -1948,39 +1919,77 @@ function setupYouTubeLinkButton() {
                         }
                     }
                     
-                    statusElement.textContent = `Title fetched successfully! (${methodUsed})`;
-                    statusElement.style.color = 'green';
+                    // No need to remove anything - we're using the top feedback
+                    
+                    // Show nice animated feedback in the modal
+                    modalFeedback.textContent = `Title fetched successfully!`;
+                    
+                    // Show the feedback with animation
+                    showFeedbackMessage(modalFeedback, true);
                     
                 } catch (fetchError) {
                     console.warn('Title fetch error or timeout:', fetchError);
-                    statusElement.textContent = 'Could not fetch title from YouTube, using video ID instead.';
-                    statusElement.style.color = 'orange';
+                    
+                    // No need to remove anything - we're using the top feedback
                     
                     // Set a fallback title
                     youtubeTitleInput.value = `YouTube Video: ${videoId}`;
                     youtubeTitleInput.focus();
                     youtubeTitleInput.select();
+                    
+                    // Show error feedback in the modal
+                    modalFeedback.textContent = 'Could not fetch title from YouTube';
+                    modalFeedback.style.backgroundColor = 'rgba(254, 242, 242, 0.98)'; // Light red
+                    modalFeedback.style.color = '#991b1b'; // Dark red
+                    
+                    // Show the feedback with animation
+                    showFeedbackMessage(modalFeedback, true);
+                    
+                    // Reset styling after animation completes
+                    setTimeout(() => {
+                        modalFeedback.style.backgroundColor = 'rgba(236, 253, 241, 0.98)';
+                        modalFeedback.style.color = '#0c652f';
+                    }, 2500);
                 }
             } else {
-                statusElement.textContent = 'Could not find valid YouTube video ID in the URL.';
-                statusElement.style.color = 'red';
-                alert('Could not find YouTube video ID in the URL');
+                // No need for status removal - using modal feedback now
+                
+                // Show error feedback in the modal
+                modalFeedback.textContent = 'Could not find YouTube video ID in the URL';
+                modalFeedback.style.backgroundColor = 'rgba(254, 242, 242, 0.98)'; // Light red
+                modalFeedback.style.color = '#991b1b'; // Dark red
+                
+                // Show the feedback with animation
+                showFeedbackMessage(modalFeedback, true);
+                
+                // Reset styling after animation completes
+                setTimeout(() => {
+                    modalFeedback.style.backgroundColor = 'rgba(236, 253, 241, 0.98)';
+                    modalFeedback.style.color = '#0c652f';
+                }, 2500);
             }
         } catch (error) {
             console.error('Error in YouTube title processing:', error);
-            statusElement.textContent = 'Error processing YouTube URL. Please enter title manually.';
-            statusElement.style.color = 'red';
+            
+            // No need for status removal - using modal feedback now
+            
+            // Show error feedback in the modal
+            modalFeedback.textContent = 'Error processing YouTube URL';
+            modalFeedback.style.backgroundColor = 'rgba(254, 242, 242, 0.98)'; // Light red
+            modalFeedback.style.color = '#991b1b'; // Dark red
+            
+            // Show the feedback with animation
+            showFeedbackMessage(modalFeedback, true);
+            
+            // Reset styling after animation completes
+            setTimeout(() => {
+                modalFeedback.style.backgroundColor = 'rgba(236, 253, 241, 0.98)';
+                modalFeedback.style.color = '#0c652f';
+            }, 2500);
         } finally {
             // Re-enable the button
             fetchTitleBtn.disabled = false;
             fetchTitleBtn.textContent = 'Fetch Title';
-            
-            // Remove the status message after a delay
-            setTimeout(() => {
-                if (statusElement.parentNode) {
-                    statusElement.parentNode.removeChild(statusElement);
-                }
-            }, 4000); // Increased to 4 seconds to give more time to read the method used
         }
     }
     
@@ -1992,10 +2001,63 @@ function setupYouTubeLinkButton() {
     
     // Event listeners
     addYouTubeBtn.addEventListener('click', showYouTubeModal);
-    closeModalBtn.addEventListener('click', hideYouTubeModal);
-    cancelBtn.addEventListener('click', hideYouTubeModal);
-    insertLinkBtn.addEventListener('click', insertYouTubeLink);
-    fetchTitleBtn.addEventListener('click', fetchYouTubeTitle);
+    
+    // Set up Cancel button event listener
+    const setupCancelButton = () => {
+        const btn = document.getElementById('cancel-youtube-link-btn');
+        if (btn) {
+            // Remove existing event listeners to avoid duplicates
+            btn.replaceWith(btn.cloneNode(true));
+            
+            // Get fresh reference and add click event
+            const freshBtn = document.getElementById('cancel-youtube-link-btn');
+            freshBtn.addEventListener('click', hideYouTubeModal);
+        }
+    };
+    
+    // Set it up initially
+    setupCancelButton();
+    
+    // Also set it up when the modal is shown
+    addYouTubeBtn.addEventListener('click', setupCancelButton);
+    
+    // Set up Insert button event listener
+    const setupInsertButton = () => {
+        const btn = document.getElementById('insert-youtube-link-btn');
+        if (btn) {
+            // Remove existing event listeners to avoid duplicates
+            btn.replaceWith(btn.cloneNode(true));
+            
+            // Get fresh reference and add click event
+            const freshBtn = document.getElementById('insert-youtube-link-btn');
+            freshBtn.addEventListener('click', insertYouTubeLink);
+        }
+    };
+    
+    // Set it up initially
+    setupInsertButton();
+    
+    // Also set it up when the modal is shown
+    addYouTubeBtn.addEventListener('click', setupInsertButton);
+    
+    // Set up Fetch Title button event listener
+    const setupFetchTitleButton = () => {
+        const btn = document.getElementById('fetch-youtube-title-btn');
+        if (btn) {
+            // Remove existing event listeners to avoid duplicates
+            btn.replaceWith(btn.cloneNode(true));
+            
+            // Get fresh reference and add click event
+            const freshBtn = document.getElementById('fetch-youtube-title-btn');
+            freshBtn.addEventListener('click', fetchYouTubeTitle);
+        }
+    };
+    
+    // Set it up initially
+    setupFetchTitleButton();
+    
+    // Also set it up when the modal is shown
+    addYouTubeBtn.addEventListener('click', setupFetchTitleButton);
     
     // Close modal when clicking outside
     youtubeModal.addEventListener('click', (e) => {
@@ -2201,6 +2263,39 @@ function initResponsiveToolbar() {
     }
 }
 
+// Function to set up Line Break button functionality
+function setupLineBreakButton() {
+    const lineBreakBtn = document.getElementById('add-linebreak-btn');
+    const contextInput = document.getElementById('youtube-context');
+    
+    if (!lineBreakBtn || !contextInput) {
+        console.error('Line break button or context input not found');
+        return;
+    }
+    
+    lineBreakBtn.addEventListener('click', function() {
+        // If the context input has focus, insert // at the cursor position
+        if (document.activeElement === contextInput) {
+            const cursorPos = contextInput.selectionStart;
+            const textBefore = contextInput.value.substring(0, cursorPos);
+            const textAfter = contextInput.value.substring(cursorPos);
+            
+            // Insert // at cursor position
+            contextInput.value = textBefore + '//' + textAfter;
+            
+            // Move cursor after the inserted text
+            contextInput.selectionStart = cursorPos + 2;
+            contextInput.selectionEnd = cursorPos + 2;
+        } else {
+            // Otherwise, add // at the end of the context input
+            contextInput.value += '//';
+        }
+        
+        // Focus the context input after adding the line break
+        contextInput.focus();
+    });
+}
+
 // Execute on page load
 window.addEventListener('load', function() {
     // Initialize the rich text editor
@@ -2217,12 +2312,10 @@ window.addEventListener('load', function() {
     if (resizer) {
         resizer.addEventListener('mouseup', function() {
             // Update immediately and also after a small delay to catch any layout changes
-            if (typeof updateIconSizes === 'function') {
-                updateIconSizes();
-                
-                // Additional update after layout settles
-                setTimeout(updateIconSizes, 100);
-            }
+            updateIconSizes();
+            
+            // Additional update after layout settles
+            setTimeout(updateIconSizes, 100);
         });
     }
 });

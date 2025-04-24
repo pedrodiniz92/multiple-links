@@ -233,6 +233,19 @@ h1 .title-text {
     opacity: 0.6;
 }
 
+/* Quill button tooltips */
+.quill-button, .quill-select-container {
+    position: relative;
+}
+
+.quill-button .custom-tooltip, 
+.quill-select-container .custom-tooltip {
+    bottom: -28px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 200;
+}
+
 .input-section {
     transition: all 0.3s ease;
 }
@@ -284,8 +297,8 @@ button {
     line-height: 1;
 }
 
-/* Very understated button styles with blue outlines */
-#go-button, #get-link-button, #new-links-button, #share-links-button {
+/* Very understated button styles with blue outlines - for standard buttons */
+#get-link-button, #new-links-button, #share-links-button {
     background-color: transparent;
     color: var(--button-text);
     border: 1px solid var(--button-border);
@@ -295,35 +308,138 @@ button {
     letter-spacing: 0.01em;
 }
 
-#go-button:hover, #get-link-button:hover, #new-links-button:hover, #share-links-button:hover {
+#get-link-button:hover, #new-links-button:hover, #share-links-button:hover {
     background-color: var(--button-hover-bg);
     color: var(--accent-primary);
     transform: translateY(-1px);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-#go-button:active, #get-link-button:active, #new-links-button:active, #share-links-button:active {
+#get-link-button:active, #new-links-button:active, #share-links-button:active {
     background-color: var(--button-hover-bg);
     opacity: 0.8;
     transform: translateY(0);
 }
 
-#clipboard-feedback {
+/* Go button with bold text */
+#go-button {
+    background-color: rgba(0, 0, 0, 0.05); /* Light gray background like icons */
+    color: var(--text-secondary); /* Gray text */
+    border: none; /* No outline */
+    box-shadow: none;
+    transition: all 0.2s ease;
+    font-weight: 700; /* Bold text */
+    letter-spacing: 0.01em;
+}
+
+#go-button:hover {
+    background-color: rgba(59, 130, 246, 0.1); /* Light blue background on hover */
+    color: var(--accent-primary); /* Blue text on hover */
+    transform: translateY(-1px);
+    border: none; /* Ensure no border appears */
+}
+
+#go-button:active {
+    transform: translateY(0);
+    opacity: 0.9;
+}
+
+/* Dark mode styles for Go button */
+[data-theme="dark"] #go-button {
+    background-color: rgba(255, 255, 255, 0.1); /* Dark mode light gray */
+    color: var(--text-secondary); /* Gray text */
+}
+
+[data-theme="dark"] #go-button:hover {
+    background-color: rgba(96, 165, 250, 0.15); /* Blue hover in dark mode */
+    color: var(--accent-primary); /* Blue text on hover */
+}
+
+#clipboard-feedback, #title-fetch-feedback {
     display: none;
-    background-color: var(--feedback-bg);
-    color: var(--feedback-text);
-    padding: 0.8rem;
+    background-color: rgba(236, 253, 241, 0.98); /* Very light green background, more opaque */
+    color: #0c652f; /* Dark green text */
+    padding: 0.8rem 1.2rem;
     border-radius: 8px;
     text-align: center;
-    margin-bottom: 1rem;
-    font-weight: 500;
-    box-shadow: var(--card-shadow);
-    animation: fadeIn 0.3s;
+    font-weight: 600; /* Slightly bolder text */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); /* Stronger shadow */
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000; /* Higher than the modal */
+    min-width: 220px;
+    max-width: 90%;
+    pointer-events: none;
+    will-change: transform, opacity;
+    border: 1px solid rgba(209, 250, 229, 0.7); /* Subtle border */
+}
+
+/* Dark mode adjustment for feedback messages */
+[data-theme="dark"] #clipboard-feedback,
+[data-theme="dark"] #title-fetch-feedback {
+    background-color: rgba(209, 250, 229, 0.98); /* Slightly darker in dark mode, more opaque */
+    color: #065f46; /* Darker green text in dark mode */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35); /* Stronger shadow for dark mode */
+    border: 1px solid rgba(150, 240, 200, 0.5); /* Adjusted border for dark mode */
+}
+
+/* Dark mode adjustment for modal content */
+[data-theme="dark"] .modal-content {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+
+/* Dark mode for modal feedback */
+[data-theme="dark"] #modal-title-feedback {
+    background-color: rgba(209, 250, 229, 0.98);
+    color: #065f46;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(150, 240, 200, 0.5);
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { 
+        opacity: 0; 
+        transform: translate(-50%, -30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translate(-50%, 0); 
+    }
+}
+
+@keyframes fadeOut {
+    from { 
+        opacity: 1; 
+        transform: translate(-50%, 0); 
+    }
+    to { 
+        opacity: 0; 
+        transform: translate(-50%, -30px); 
+    }
+}
+
+@keyframes modalFeedbackIn {
+    from { 
+        opacity: 0; 
+        transform: translateX(-50%) translateY(-10px);
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@keyframes modalFeedbackOut {
+    from { 
+        opacity: 1; 
+        transform: translateX(-50%) translateY(0);
+    }
+    to { 
+        opacity: 0; 
+        transform: translateX(-50%) translateY(-10px);
+    }
 }
 
 .link-card, .text-card, .header-card {
@@ -729,7 +845,9 @@ iframe {
 }
 
 /* Show the tooltip on hover */
-.toolbar-icon:hover .custom-tooltip {
+.toolbar-icon:hover .custom-tooltip,
+.quill-button:hover .custom-tooltip,
+.quill-select-container:hover .custom-tooltip {
     visibility: visible;
     opacity: 1;
 }
@@ -794,7 +912,7 @@ iframe {
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 9900; /* Lower than the feedback messages (10000) */
     left: 0;
     top: 0;
     width: 100%;
@@ -806,12 +924,32 @@ iframe {
 
 .modal-content {
     background-color: var(--card-bg);
-    border-radius: 8px;
-    box-shadow: var(--card-shadow);
-    width: 450px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    width: 650px;
     max-width: 90%;
     animation: modalFadeIn 0.2s ease;
     border: 1px solid var(--border-color);
+    position: relative; /* For absolute positioning of feedback */
+}
+
+/* Modal feedback message */
+#modal-title-feedback {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(236, 253, 241, 0.98); /* Green background */
+    color: #0c652f; /* Dark green text */
+    padding: 0.7rem 1.2rem;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    min-width: 220px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    display: none;
+    border: 1px solid rgba(209, 250, 229, 0.7);
 }
 
 @keyframes modalFadeIn {
@@ -829,59 +967,97 @@ iframe {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
+    padding: 24px 32px;
     border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h3 {
     margin: 0;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 500;
     color: var(--text-primary);
 }
 
 .modal-body {
-    padding: 16px;
+    padding: 32px;
 }
 
 .form-group {
-    margin-bottom: 16px;
+    margin-bottom: 32px;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 6px;
-    font-size: 14px;
+    margin-bottom: 10px;
+    font-size: 16px;
     color: var(--text-primary);
+    font-weight: 500;
 }
 
 .form-group input {
     width: 100%;
-    padding: 8px 12px;
-    border-radius: 6px;
+    padding: 12px 16px;
+    border-radius: 8px;
     border: 1px solid var(--input-border);
     background-color: var(--input-bg);
     color: var(--text-primary);
-    font-size: 14px;
+    font-size: 15px;
+    line-height: 1.5;
 }
 
 .form-group input:focus {
     outline: none;
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    transition: all 0.2s ease;
+}
+
+/* Make placeholder text lighter */
+::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+/* Context group with Line Break button */
+.context-group {
+    margin-bottom: 32px;
+}
+
+.context-input-container {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.context-input-container input {
+    flex: 1;
+    min-width: 0; /* Allow the input to shrink below its content size */
+}
+
+.context-input-container button {
+    width: 30%;
+    height: auto;
+    padding: 12px 8px;
+    margin: 0;
+    flex: 0 0 30%; /* Exact 30% width, don't grow or shrink */
+    min-width: 120px; /* Ensure minimum width */
+    font-size: 15px;
+    border-radius: 8px;
 }
 
 .modal-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-top: 20px;
+    gap: 16px;
+    margin-top: 40px;
 }
 
 .modal-actions button {
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
@@ -889,8 +1065,8 @@ iframe {
 
 .time-inputs {
     display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: 20px;
+    margin-bottom: 20px;
 }
 
 .time-inputs .form-group {
@@ -898,9 +1074,9 @@ iframe {
 }
 
 .format-note {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: var(--text-secondary);
-    margin-top: 4px;
+    margin-top: 6px;
     font-style: italic;
     opacity: 0.8;
 }
@@ -959,14 +1135,23 @@ iframe {
 }
 
 .secondary-button {
-    background-color: transparent;
-    border: 1px solid var(--button-border);
+    background-color: rgba(0, 0, 0, 0.05);
+    border: none;
     color: var(--button-text);
 }
 
 .secondary-button:hover {
-    background-color: var(--button-hover-bg);
-    color: var(--accent-primary);
+    background-color: rgba(0, 0, 0, 0.08);
+    color: var(--text-primary);
+}
+
+/* Dark mode version */
+[data-theme="dark"] .secondary-button {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .secondary-button:hover {
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
 .cancel-button {

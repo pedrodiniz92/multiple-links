@@ -63,26 +63,39 @@
         </div>
         <!-- Edit share container removed as functionality is now in the icons -->
         <div class="input-section">
-            <div id="editor-tooltip" class="tooltip-text">
-                Click the YouTube button in the toolbar to add a YouTube link with a custom title. Start lines with # for headers.
-            </div>
+            <!-- Editor tooltip removed -->
             <div id="editor-container">
                 <div id="editor-toolbar">
                     <span class="ql-formats">
-                        <button class="ql-bold" title="Bold"></button>
-                        <button class="ql-italic" title="Italic"></button>
-                        <button class="ql-underline" title="Underline"></button>
-                        <button class="ql-strike" title="Strikethrough"></button>
+                        <button class="ql-bold quill-button" title="Bold">
+                            <span class="custom-tooltip">Bold</span>
+                        </button>
+                        <button class="ql-italic quill-button" title="Italic">
+                            <span class="custom-tooltip">Italic</span>
+                        </button>
+                        <button class="ql-underline quill-button" title="Underline">
+                            <span class="custom-tooltip">Underline</span>
+                        </button>
+                        <button class="ql-strike quill-button" title="Strikethrough">
+                            <span class="custom-tooltip">Strikethrough</span>
+                        </button>
                     </span>
                     <span class="ql-formats">
-                        <select class="ql-color" title="Text Color"></select>
-                        <select class="ql-background" title="Background Color"></select>
+                        <span class="quill-select-container">
+                            <select class="ql-color" title="Text Color"></select>
+                            <span class="custom-tooltip">Text Color</span>
+                        </span>
+                        <span class="quill-select-container">
+                            <select class="ql-background" title="Background Color"></select>
+                            <span class="custom-tooltip">Background Color</span>
+                        </span>
                     </span>
                     <span class="ql-formats">
-                        <button id="add-youtube-link" title="Add YouTube Link">
+                        <button id="add-youtube-link" class="quill-button" title="Add YouTube Link">
                             <svg viewBox="0 0 24 24" width="18" height="18">
                                 <path fill="currentColor" d="M10,15L15.19,12L10,9V15M21.56,7.17C21.69,7.64 21.78,8.27 21.84,9.07C21.91,9.87 21.94,10.56 21.94,11.16L22,12C22,14.19 21.84,15.8 21.56,16.83C21.31,17.73 20.73,18.31 19.83,18.56C19.36,18.69 18.5,18.78 17.18,18.84C15.88,18.91 14.69,18.94 13.59,18.94L12,19C7.81,19 5.2,18.84 4.17,18.56C3.27,18.31 2.69,17.73 2.44,16.83C2.31,16.36 2.22,15.73 2.16,14.93C2.09,14.13 2.06,13.44 2.06,12.84L2,12C2,9.81 2.16,8.2 2.44,7.17C2.69,6.27 3.27,5.69 4.17,5.44C4.64,5.31 5.5,5.22 6.82,5.16C8.12,5.09 9.31,5.06 10.41,5.06L12,5C16.19,5 18.8,5.16 19.83,5.44C20.73,5.69 21.31,6.27 21.56,7.17Z" />
                             </svg>
+                            <span class="custom-tooltip">Add YouTube Link</span>
                         </button>
                     </span>
                 </div>
@@ -97,6 +110,9 @@
         <div id="clipboard-feedback">
             Link copied to clipboard!
         </div>
+        <div id="title-fetch-feedback">
+            Title fetched successfully!
+        </div>
         <div id="links-container"></div>
     </div>
     <div id="resizer"></div>
@@ -107,22 +123,28 @@
     <!-- Add YouTube Link Modal -->
     <div id="add-youtube-modal" class="modal">
         <div class="modal-content">
+            <div id="modal-title-feedback">Title fetched successfully!</div>
             <div class="modal-header">
                 <h3>Add YouTube Link</h3>
-                <button class="close-button" id="close-youtube-modal">×</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label for="youtube-url">YouTube URL:</label>
-                    <input type="text" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." />
+                    <input type="text" id="youtube-url" />
                 </div>
-                <div class="form-group">
+                <div class="form-group context-group">
                     <label for="youtube-context">Context (optional):</label>
-                    <input type="text" id="youtube-context" placeholder="Enter context information" />
+                    <div class="context-input-container">
+                        <input type="text" id="youtube-context" placeholder="Use // for line breaks" />
+                        <button type="button" id="add-linebreak-btn" class="secondary-button">Line break</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="youtube-title">Custom Title (optional):</label>
-                    <input type="text" id="youtube-title" placeholder="Enter custom title for the video" />
+                    <div class="context-input-container">
+                        <input type="text" id="youtube-title" />
+                        <button type="button" id="fetch-youtube-title-btn" class="secondary-button">Fetch Title</button>
+                    </div>
                 </div>
                 
                 <div class="time-inputs">
@@ -139,7 +161,6 @@
                 </div>
                 
                 <div class="modal-actions">
-                    <button id="fetch-youtube-title-btn" class="secondary-button">Fetch Title</button>
                     <button id="insert-youtube-link-btn" class="primary-button">Insert</button>
                     <button id="cancel-youtube-link-btn" class="cancel-button">Cancel</button>
                 </div>
