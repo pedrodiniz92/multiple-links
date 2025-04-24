@@ -16,19 +16,43 @@
     <div id="left-panel">
         <h1>
             <span class="title-text">Watch it!</span>
-            <div class="theme-toggle-container">
-                <div class="theme-icon sun-icon" aria-hidden="true"></div>
-                <div id="theme-toggle" title="Toggle dark mode"></div>
-                <div class="theme-icon moon-icon" aria-hidden="true"></div>
-            </div>
         </h1>
         <h2 class="attribution">
             built by <a href="https://www.linkedin.com/in/pedro-diniz-619733a2/" target="_blank">Pedro Diniz</a>
         </h2>
-        <div class="edit-share-container">
-            <button id="new-links-button">Edit Links</button>
-            <button id="share-links-button">Link to share</button>
+        <div class="toolbar-container">
+            <div class="toolbar-group">
+                <button class="toolbar-icon" id="edit-text-icon">
+                    <img src="icons/pen.svg" alt="Edit text" width="20" height="20">
+                    <span class="custom-tooltip">Edit text</span>
+                </button>
+                <button class="toolbar-icon">
+                    <img src="icons/floppy.svg" alt="Save" width="20" height="20">
+                    <span class="custom-tooltip">Save</span>
+                </button>
+                <button class="toolbar-icon">
+                    <img src="icons/folder.svg" alt="Open" width="20" height="20">
+                    <span class="custom-tooltip">Open</span>
+                </button>
+                <button class="toolbar-icon" id="share-icon">
+                    <img src="icons/link.svg" alt="Share" width="20" height="20">
+                    <span class="custom-tooltip">Share</span>
+                </button>
+            </div>
+            <div class="toolbar-separator"></div>
+            <div class="toolbar-group">
+                <button class="toolbar-icon">
+                    <img src="icons/new-file.svg" alt="New document" width="20" height="20">
+                    <span class="custom-tooltip">New document</span>
+                </button>
+                <button class="toolbar-icon" id="theme-toggle-icon">
+                    <img src="icons/sun.svg" alt="Light mode" width="20" height="20" class="theme-icon-dark">
+                    <img src="icons/moon.svg" alt="Dark mode" width="20" height="20" class="theme-icon-light">
+                    <span class="custom-tooltip theme-tooltip">Dark mode</span>
+                </button>
+            </div>
         </div>
+        <!-- Edit share container removed as functionality is now in the icons -->
         <div class="input-section">
             <div id="editor-tooltip" class="tooltip-text">
                 Click the YouTube button in the toolbar to add a YouTube link with a custom title. Start lines with # for headers.
@@ -59,7 +83,6 @@
             </div>
             <div class="button-container">
                 <button id="go-button">Go!</button>
-                <button id="get-link-button">Link to share</button>
             </div>
         </div>
         <div id="clipboard-feedback">

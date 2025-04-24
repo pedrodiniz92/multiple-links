@@ -1,68 +1,33 @@
-# Completed: YouTube Timestamp Fix
+We are going to make some gradual changes to the layout. 
 
-## The Issue
+## DONE - You don't need to do anything listed in this segment
+** Below "built by Pedro Diniz" but above the rest of the content, create a vertical container.
+In it, add 4 placeholder icons, a vertical bar separator, then two placeholder icons.
 
-When embedding multiple YouTube clips from the same video with different start times, all clips were starting at the 4:17 mark (257 seconds) regardless of their specified timestamps. This occurred with these test URLs:
+The icons should show these tooltips, respectively:
+* Edit text
+* Save
+* Open
+* Share
+[ vertical bar separator]
+* New document
+* Dark theme / Light theme
 
-```
-["To your point..."]https://www.youtube.com/embed/DI-LKs3GpeE?start=257&end=270
-https://www.youtube.com/embed/DI-LKs3GpeE?start=452&end=465
-https://www.youtube.com/embed/DI-LKs3GpeE?start=684&end=700
-https://www.youtube.com/embed/DI-LKs3GpeE?start=990&end=1005
-https://www.youtube.com/embed/DI-LKs3GpeE?start=2648&end=2668
-https://www.youtube.com/embed/DI-LKs3GpeE?start=2800&end=2816
-```
+Make it so that everything has proper spacing and padding following design best practices.
 
-## Cause
+** Instead of placeholder icons, now use the material found in /icons. 
+If you are unsure which icon to use for what, prompt me in the CLI and I'll answer.
 
-This issue was caused by YouTube player caching or state persistence:
+It is VERY important that:
+- While in light mode, serve moon.svg as the last icon, tooltip: "Dark mode"
+- While in dark mode, serve sun.svg as the last icon, tooltip: "Light mode"
 
-1. **Browser caching**: The browser cached the YouTube player state
-2. **Same video ID**: All embeds used the same video ID, causing the player to remember the position
-3. **YouTube embed parameter handling**: YouTube's handling of start parameters for subsequent plays of the same video was inconsistent
+** The elements within the quill editor work super well in dark mode - their color is changed in order to remain visible.
+But this isn't happening to our icon bar. In dark mode, they're barely visible. Can we give them a treatment like the quill items?
 
-## Implemented Solution
+## TO DO - You need to do what is listed here
 
-After testing multiple approaches, we implemented Solution #3 which completely replaces the iframe element for each video. This implementation is found in the `loadVideo()` function in `app.js`.
+When i hover over an icon
+The tooltips look kinda basic. Like the default ones. Can we make them look nicer with regular css? I'm ok with you adding tailwind css or whatever else is necessary.
 
-Key features of the solution:
-
-1. **Complete iframe replacement**: Instead of just changing the `src` attribute, we completely remove the old iframe and create a new one
-2. **Multiple cache-busting techniques**:
-   - Unique timestamp parameter (`cb=${Date.now()}`)
-   - Brand new DOM element for each video
-3. **Proper YouTube API integration** with `enablejsapi=1` parameter
-
-The implementation ensures that YouTube cannot maintain any previous player state between videos, fixing the timestamp issue completely.
-
-## Testing the Fix
-
-We've created a dedicated test page to verify the solution:
-
-```
-/test/timestamp-test.html
-```
-
-This test page allows you to:
-- Test all three solutions we considered
-- Compare with the original problem (no solution)
-- Load individual clips with different timestamps
-- Test all clips in sequence
-- See detailed logs of what's happening
-
-To test:
-1. Open the timestamp test page
-2. Select "Solution #3" from the dropdown (default)
-3. Click on different timestamp buttons to verify they start at the correct times
-4. Use "Test All Clips" to run through each clip in sequence
-5. Try other solution methods to compare effectiveness
-
-## Future Improvements
-
-If there are any remaining timestamp issues, we could consider:
-
-1. Implementing the full YouTube Player API for even more control
-2. Adding error handling for timestamp failures
-3. Implementing additional caching prevention techniques
-
-For now, Solution #3 provides a robust fix that should resolve the timestamp issue in all normal usage scenarios.
+run the server so I can see everything.

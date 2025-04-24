@@ -5,15 +5,12 @@ const rightPanel = document.getElementById('right-panel');
 const goButton = document.getElementById('go-button');
 const linksContainer = document.getElementById('links-container');
 const viewer = document.getElementById('viewer');
-const getLinkButton = document.getElementById('get-link-button');
-const shareLinksButton = document.getElementById('share-links-button');
+// Share buttons have been removed, using only the share icon now
 const clipboardFeedback = document.getElementById('clipboard-feedback');
-const themeToggle = document.getElementById('theme-toggle');
+const themeToggleIcon = document.getElementById('theme-toggle-icon');
 const htmlElement = document.documentElement;
 const urlInput = document.getElementById('url-input');
 const inputSection = document.querySelector('.input-section');
-const newLinksButton = document.getElementById('new-links-button');
-const editShareContainer = document.querySelector('.edit-share-container');
 
 // Rich text editor
 let quill;
@@ -47,14 +44,12 @@ document.addEventListener('mousemove', (e) => {
     rightPanel.style.width = `${100 - newLeftPanelWidth}%`;
 });
 
-// Toggle input section visibility and edit/share buttons
+// Toggle input section visibility
 function toggleInputSection(show) {
     if (show) {
         inputSection.classList.remove('hidden');
-        editShareContainer.style.display = 'none';
     } else {
         inputSection.classList.add('hidden');
-        editShareContainer.style.display = 'flex';
     }
 }
 
@@ -427,24 +422,7 @@ function getCurrentLinksFromCards() {
     return contents;
 }
 
-// Edit links button event listener
-newLinksButton.addEventListener('click', () => {
-    // Get current links from cards and populate the textarea
-    const currentLinks = getCurrentLinksFromCards();
-    const content = currentLinks.join('\n');
-    urlInput.value = content;
-    
-    // Update the rich text editor
-    setQuillContent(content);
-    
-    // Show input section
-    toggleInputSection(true);
-    
-    // Focus the rich text editor
-    if (quill) {
-        quill.focus();
-    }
-});
+// Edit links button has been removed, functionality moved to edit-text-icon
 
 // Function to copy shareable link to clipboard
 function copyShareableLink() {
@@ -466,9 +444,31 @@ function copyShareableLink() {
     showClipboardFeedback();
 }
 
-// Add share functionality to both "Link to share" buttons
-getLinkButton.addEventListener('click', copyShareableLink);
-shareLinksButton.addEventListener('click', copyShareableLink);
+// Get the icon elements
+const shareIcon = document.getElementById('share-icon');
+const editTextIcon = document.getElementById('edit-text-icon');
+
+// Add share functionality to the share icon
+shareIcon.addEventListener('click', copyShareableLink);
+
+// Add edit functionality to the edit text icon (same as the "Edit Links" button)
+editTextIcon.addEventListener('click', () => {
+    // Get current links from cards and populate the textarea
+    const currentLinks = getCurrentLinksFromCards();
+    const content = currentLinks.join('\n');
+    urlInput.value = content;
+    
+    // Update the rich text editor
+    setQuillContent(content);
+    
+    // Show input section
+    toggleInputSection(true);
+    
+    // Focus the rich text editor
+    if (quill) {
+        quill.focus();
+    }
+});
 
 // Function to format seconds as minutes:seconds
 function formatTime(seconds) {
@@ -1514,8 +1514,20 @@ if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
     htmlElement.setAttribute('data-theme', 'dark');
 }
 
-// Toggle theme when the switch is clicked
-themeToggle.addEventListener('click', () => {
+// Update theme toggle icon tooltip based on current theme
+function updateThemeToggleTooltip() {
+    const currentTheme = htmlElement.getAttribute('data-theme');
+    const themeTooltip = themeToggleIcon.querySelector('.theme-tooltip');
+    
+    if (currentTheme === 'dark') {
+        themeTooltip.textContent = 'Light mode';
+    } else {
+        themeTooltip.textContent = 'Dark mode';
+    }
+}
+
+// Toggle theme when either theme toggle element is clicked
+function toggleTheme() {
     const currentTheme = htmlElement.getAttribute('data-theme');
     
     if (currentTheme === 'dark') {
@@ -1525,7 +1537,16 @@ themeToggle.addEventListener('click', () => {
         htmlElement.setAttribute('data-theme', 'dark');
         localStorage.setItem('theme', 'dark');
     }
-});
+    
+    // Update tooltip after theme change
+    updateThemeToggleTooltip();
+}
+
+// Add theme toggle event listener to the icon
+themeToggleIcon.addEventListener('click', toggleTheme);
+
+// Initialize tooltip on page load
+updateThemeToggleTooltip();
 
 // Function to make a video title editable
 function makeVideoTitleEditable(event) {
