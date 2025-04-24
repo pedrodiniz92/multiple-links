@@ -633,6 +633,16 @@ iframe {
     opacity: 1;
 }
 
+/* Invert YouTube icon in Quill toolbar in dark mode */
+[data-theme="dark"] #add-youtube-link svg {
+    filter: invert(0.85);
+    opacity: 0.85;
+}
+
+[data-theme="dark"] #add-youtube-link:hover svg {
+    opacity: 1;
+}
+
 /* Override inversion for theme icons to ensure visibility */
 [data-theme="dark"] .theme-icon-dark {
     filter: invert(1) !important;

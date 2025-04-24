@@ -25,9 +25,8 @@ It is VERY important that:
 ** The elements within the quill editor work super well in dark mode - their color is changed in order to remain visible.
 But this isn't happening to our icon bar. In dark mode, they're barely visible. Can we give them a treatment like the quill items?
 
+**added custom tooltips
+
 ## TO DO - You need to do what is listed here
 
-When i hover over an icon
-The tooltips look kinda basic. Like the default ones. Can we make them look nicer with regular css? I'm ok with you adding tailwind css or whatever else is necessary.
-
-run the server so I can see everything.
+In dark mode, the youtube icon inside quill looks to dark and barely visible. Can we invert its colors when dark mode is on?
