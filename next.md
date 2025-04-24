@@ -30,7 +30,6 @@ But this isn't happening to our icon bar. In dark mode, they're barely visible. 
 **created sign up and sign in buttons
 
 
-## DONE - You need to do what is listed here
+## TO DO - You need to do what is listed here
 
-I want the "sign up" text to be blue. ✓
-"Sign up" and "Sign in" - upon hover, we get a background in the same style of the icons. ✓
+I'm concerned about how long app.js is. What would be a very small function from it that we could move to another .js file? I have tried major refactors earlier and they broke everything. So we need to keep it small for this first step.

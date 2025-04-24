@@ -47,14 +47,7 @@ document.addEventListener('mousemove', (e) => {
     requestAnimationFrame(updateIconSizes);
 });
 
-// Toggle input section visibility
-function toggleInputSection(show) {
-    if (show) {
-        inputSection.classList.remove('hidden');
-    } else {
-        inputSection.classList.add('hidden');
-    }
-}
+// toggleInputSection is now imported from js/services/ui-service.js
 
 // Parse URL parameters if present
 async function parseUrlParams() {
@@ -72,7 +65,7 @@ async function parseUrlParams() {
         urlInput.value = decodedContent;
         
         // Update the rich text editor with the content
-        setQuillContent(decodedContent);
+        setQuillContent(quill, decodedContent);
         
         await processLinks();
         toggleInputSection(false); // Hide input after processing links
@@ -85,36 +78,7 @@ function generateShareableUrl() {
     return `${window.location.origin}${window.location.pathname}?urls=${encodedLinks}`;
 }
 
-// Generic function to show feedback messages with animations
-function showFeedbackMessage(element, isModal = false) {
-    // Reset animation and set display to block
-    element.style.display = 'block';
-    
-    // Remove any existing animation
-    element.style.animation = 'none';
-    
-    // Force reflow to make sure the animation restart works
-    void element.offsetWidth;
-    
-    // Apply different animations based on the type of feedback
-    if (isModal) {
-        // For modal feedback (appears at the top of the modal)
-        element.style.animation = 'modalFeedbackIn 0.3s ease forwards, modalFeedbackOut 0.3s ease 1.8s forwards';
-        
-        // Hide the element after animations complete - using shorter duration for modal
-        setTimeout(() => {
-            element.style.display = 'none';
-        }, 2400); // Total animation time: 0.3s in + 1.8s delay + 0.3s out
-    } else {
-        // For global feedback (appears at the top of the page)
-        element.style.animation = 'fadeIn 0.4s ease forwards, fadeOut 0.4s ease 2s forwards';
-        
-        // Hide the element after animations complete
-        setTimeout(() => {
-            element.style.display = 'none';
-        }, 2800); // Total animation time: 0.4s in + 2s delay + 0.4s out
-    }
-}
+// showFeedbackMessage is now imported from js/services/ui-service.js
 
 // Show the clipboard feedback message temporarily with animations
 function showClipboardFeedback() {
@@ -203,43 +167,7 @@ function parseLinkWithTitle(input) {
     };
 }
 
-// Helper function to fix HTML entities in URLs
-function fixHtmlEntitiesInUrls(text) {
-    // Look for URL patterns and fix any HTML entities within them
-    let fixedText = text;
-    
-    // Define a regex to match URLs
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    
-    // Replace any &amp; with & in the URLs
-    fixedText = fixedText.replace(urlRegex, (match) => {
-        return match
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'");
-    });
-    
-    return fixedText;
-}
-
-// Function to check if input is a valid URL
-function isValidUrl(string) {
-    // Remove any formatting HTML tags before checking URL validity
-    // This helps when users paste formatted URLs
-    let cleanString = string;
-    
-    // Remove common HTML formatting tags
-    cleanString = cleanString.replace(/<\/?[^>]+(>|$)/g, "");
-    
-    try {
-        new URL(cleanString);
-        return true;
-    } catch (_) {
-        return false;
-    }
-}
+// fixHtmlEntitiesInUrls is now imported from js/utils/string-utils.js
 
 // Function to create a text card
 function createTextCard(text) {
@@ -490,7 +418,7 @@ editTextIcon.addEventListener('click', () => {
     urlInput.value = content;
     
     // Update the rich text editor
-    setQuillContent(content);
+    setQuillContent(quill, content);
     
     // Show input section
     toggleInputSection(true);
@@ -501,12 +429,7 @@ editTextIcon.addEventListener('click', () => {
     }
 });
 
-// Function to format seconds as minutes:seconds
-function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-}
+// formatTime is now imported from js/utils/time-utils.js
 
 // Function to extract YouTube video ID and parameters from various URL formats
 function extractYouTubeInfo(url) {
@@ -964,12 +887,7 @@ async function getFormattedLinkDisplay(url) {
     }
 }
 
-// Function to decode HTML entities
-function decodeHTMLEntities(text) {
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = text;
-    return textarea.value;
-}
+// decodeHTMLEntities is now imported from js/utils/string-utils.js
 
 // Common YouTube video titles for testing
 const commonVideos = {
@@ -1448,33 +1366,9 @@ if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
     htmlElement.setAttribute('data-theme', 'dark');
 }
 
-// Update theme toggle icon tooltip based on current theme
-function updateThemeToggleTooltip() {
-    const currentTheme = htmlElement.getAttribute('data-theme');
-    const themeTooltip = themeToggleIcon.querySelector('.theme-tooltip');
-    
-    if (currentTheme === 'dark') {
-        themeTooltip.textContent = 'Light mode';
-    } else {
-        themeTooltip.textContent = 'Dark mode';
-    }
-}
+// updateThemeToggleTooltip is now imported from js/services/ui-service.js
 
-// Toggle theme when either theme toggle element is clicked
-function toggleTheme() {
-    const currentTheme = htmlElement.getAttribute('data-theme');
-    
-    if (currentTheme === 'dark') {
-        htmlElement.removeAttribute('data-theme');
-        localStorage.setItem('theme', 'light');
-    } else {
-        htmlElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('theme', 'dark');
-    }
-    
-    // Update tooltip after theme change
-    updateThemeToggleTooltip();
-}
+// toggleTheme is now imported from js/services/ui-service.js
 
 // Add theme toggle event listener to the icon
 themeToggleIcon.addEventListener('click', toggleTheme);
@@ -2096,69 +1990,11 @@ function setupYouTubeLinkButton() {
     });
 }
 
-// Convert Quill HTML content to a format compatible with our existing code
-function convertQuillContentToLines(html) {
-    // Create a DOM parser to handle the HTML
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    
-    // Get all paragraphs from the Quill content
-    const paragraphs = doc.querySelectorAll('p');
-    const lines = [];
-    
-    // Process each paragraph
-    paragraphs.forEach(p => {
-        // If the paragraph only contains a <br>, it's an empty line
-        if (p.innerHTML === '<br>') {
-            lines.push('');
-            return;
-        }
-        
-        // Get paragraph content with formatting preserved
-        let content = p.innerHTML;
-        
-        // Check if this line contains a URL and fix any HTML entities in it
-        if (content.includes('http')) {
-            // Extract URLs and normalize them
-            content = fixHtmlEntitiesInUrls(content);
-        }
-        
-        lines.push(content);
-    });
-    
-    return lines.join('\n');
-}
+// convertQuillContentToLines is now imported from js/utils/quill-utils.js
 
-// Set Quill content from plain text or HTML
-function setQuillContent(content) {
-    if (!quill) return;
-    
-    // Split content into lines
-    const lines = content.split('\n');
-    
-    // Create HTML structure for Quill
-    let html = '';
-    lines.forEach((line, index) => {
-        // Check if line appears to be HTML or plain text
-        if (line.includes('<') && line.includes('>')) {
-            // Wrap HTML content in a paragraph
-            html += `<p>${line}</p>`;
-        } else {
-            // Escape plain text and wrap in a paragraph
-            html += `<p>${escapeHtml(line)}</p>`;
-        }
-    });
-    
-    // Set the HTML content in the editor
-    quill.root.innerHTML = html;
-}
+// setQuillContent is now imported from js/utils/quill-utils.js
 
-// Helper function to escape HTML special characters
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+// escapeHtml is now imported from js/utils/html-utils.js
 
 // Global reference for the update function
 let updateIconSizes;
