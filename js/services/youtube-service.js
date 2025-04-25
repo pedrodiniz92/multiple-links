@@ -4,6 +4,8 @@
  * and video loading in iframes.
  */
 
+import { extractTimeParameters } from '../utils/time-utils.js';
+
 /**
  * Extract YouTube video ID and parameters from various URL formats
  * @param {string} url - The YouTube URL to extract information from
@@ -105,7 +107,6 @@ function extractYouTubeInfo(url) {
     
     try {
         // Parse URL to extract parameters, ensuring we handle complex URLs properly
-        const params = {};
         let urlObj;
         
         try {
@@ -116,49 +117,8 @@ function extractYouTubeInfo(url) {
             urlObj = new URL(`https://www.youtube.com/watch?v=${videoId}`);
         }
         
-        // Get time parameters (t/start and end)
-        let startTime = urlObj.searchParams.get('t') || urlObj.searchParams.get('start');
-        let endTime = urlObj.searchParams.get('end');
-    
-        // Process start time
-        if (startTime) {
-            // Convert to seconds if it's in the format like "4m20s"
-            if (typeof startTime === 'string' && startTime.includes('m')) {
-                const minutesMatch = startTime.match(/(\d+)m/);
-                const secondsMatch = startTime.match(/(\d+)s/);
-                let seconds = 0;
-                if (minutesMatch) seconds += parseInt(minutesMatch[1]) * 60;
-                if (secondsMatch) seconds += parseInt(secondsMatch[1]);
-                startTime = seconds;
-            }
-            
-            // Convert start time to integer if possible
-            startTime = parseInt(startTime) || startTime;
-            
-            // For embed URLs, use 'start' parameter
-            params.start = startTime;
-        }
-        
-        // Process end time
-        if (endTime) {
-            // Convert to seconds if it's in the format like "4m20s"
-            if (typeof endTime === 'string' && endTime.includes('m')) {
-                const minutesMatch = endTime.match(/(\d+)m/);
-                const secondsMatch = endTime.match(/(\d+)s/);
-                let seconds = 0;
-                if (minutesMatch) seconds += parseInt(minutesMatch[1]) * 60;
-                if (secondsMatch) seconds += parseInt(secondsMatch[1]);
-                endTime = seconds;
-            }
-            
-            // Convert end time to integer if possible
-            endTime = parseInt(endTime) || endTime;
-            
-            // For embed URLs, use 'end' parameter
-            params.end = endTime;
-        }
-        
-        return { videoId, params };
+        // Use the extractTimeParameters utility to process time parameters
+        return extractTimeParameters({ videoId, urlObj });
         
     } catch (error) {
         console.error('Error parsing YouTube URL parameters:', error);

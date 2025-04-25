@@ -289,5 +289,44 @@
   - Preloading of video duration to improve performance
   - Support for time ranges with start and end times
 
+### Step 13: utils/time-utils.js
+- Implemented time utility functions:
+  - Time formatting (seconds to MM:SS or H:MM:SS)
+  - Time string parsing (MM:SS or H:MM:SS to seconds)
+  - YouTube time parameter extraction and processing
+  - Support for multiple time formats (MM:SS, H:MM:SS, integers)
+  - Local storage integration for video timestamps
+- Centralized time handling across the application:
+  - Updated app.js to use formatTime from the utility module
+  - Modified youtube-modal.js to use timeToSeconds function
+  - Refactored youtube-service.js to use extractTimeParameters
+  - Improved modular design by removing duplicate code
+- Ensured backward compatibility:
+  - Maintained consistent behavior for time-related operations
+  - Preserved localStorage keys and data formats
+  - Consistent display of time ranges in cards (e.g., "4:45 - 6:30")
+
+#### What to Test for Step 13
+- Test time formatting by entering YouTube URLs with different time parameters:
+  - Try: `https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30` (30 seconds)
+  - Try: `https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90` (1:30)
+  - Try: `https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=3630` (1:00:30)
+  - Verify that cards display times in proper format (MM:SS or H:MM:SS)
+- Test YouTube modal time input:
+  - Enter MM:SS format in start/end time fields (e.g., "1:30")
+  - Enter H:MM:SS format in start/end time fields (e.g., "1:30:45")
+  - Enter invalid formats (e.g., "1:75") and verify validation works
+  - Enter just seconds as a number (e.g., "90") and verify it works
+- Test time parameter extraction:
+  - Try YouTube URLs with t= parameter in seconds (e.g., t=60)
+  - Try YouTube URLs with time in minutes format (e.g., t=1m30s)
+  - Try YouTube URLs with both start and end times
+  - Verify the player starts at the correct timestamp in each case
+- Test localStorage persistence:
+  - Add a YouTube link with timestamps
+  - Close and reopen the browser
+  - Add the same YouTube link again without timestamps
+  - The previously stored timestamps should still be used for playback
+
 ## Next Step
-Step 13: Implement utils/time-utils.js with time formatting, time string parsing, and time parameter handling.
+Step 14: Implement utils/html-utils.js with HTML entity fixing in URLs, HTML entity decoding, and HTML escaping functionality.

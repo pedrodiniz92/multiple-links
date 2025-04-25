@@ -5,6 +5,7 @@
 
 import { isYouTubeUrl, extractYouTubeInfo } from '../services/youtube-service.js';
 import { fetchVideoTitle, getVideoDuration } from '../services/video-info.js';
+import { timeToSeconds } from '../utils/time-utils.js';
 
 /**
  * Initialize and set up the YouTube link modal functionality
@@ -317,48 +318,7 @@ function initYouTubeModal(options) {
         hideModal();
     }
     
-    /**
-     * Convert time format (MM:SS or H:MM:SS) to seconds
-     * @param {string} timeString - Time string in MM:SS or H:MM:SS format
-     * @returns {number|null} - Time in seconds or null if invalid format
-     */
-    function timeToSeconds(timeString) {
-        if (!timeString) return null;
-
-        // Handle various time formats
-        let seconds = 0;
-        let parts;
-
-        // Handle MM:SS format
-        if (/^\d+:\d{1,2}$/.test(timeString)) {
-            parts = timeString.split(':');
-            const minutes = parseInt(parts[0], 10);
-            const secs = parseInt(parts[1], 10);
-            
-            if (secs >= 60) return null; // Invalid seconds value
-            seconds = minutes * 60 + secs;
-            return seconds;
-        }
-        
-        // Handle H:MM:SS format
-        if (/^\d+:\d{1,2}:\d{1,2}$/.test(timeString)) {
-            parts = timeString.split(':');
-            const hours = parseInt(parts[0], 10);
-            const minutes = parseInt(parts[1], 10);
-            const secs = parseInt(parts[2], 10);
-            
-            if (minutes >= 60 || secs >= 60) return null; // Invalid values
-            seconds = hours * 3600 + minutes * 60 + secs;
-            return seconds;
-        }
-        
-        // Handle just seconds as a number
-        if (/^\d+$/.test(timeString)) {
-            return parseInt(timeString, 10);
-        }
-        
-        return null; // Invalid format
-    }
+    // timeToSeconds is now imported from '../utils/time-utils.js'
     
     /**
      * Fetch video title from YouTube and populate the form

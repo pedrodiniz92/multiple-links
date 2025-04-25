@@ -39,6 +39,7 @@ import initFeedback from './ui/feedback.js';
 import initResponsiveUI from './ui/responsive-ui.js';
 import initRichEditor from './editor/rich-editor.js';
 import initYouTubeModal from './editor/youtube-modal.js';
+import { formatTime } from './utils/time-utils.js';
 
 // DOM elements
 let resizer, leftPanel, rightPanel, goButton, linksContainer, viewer;
@@ -447,34 +448,7 @@ function updateIconSizes() {
     }
 }
 
-/**
- * Format a time in seconds to a readable format (H:MM:SS or MM:SS)
- * @param {number} seconds - The time in seconds
- * @returns {string} - Formatted time string
- */
-function formatTime(seconds) {
-    if (!seconds && seconds !== 0) return '';
-    
-    // Convert to number if it's a string
-    const totalSeconds = parseInt(seconds, 10);
-    
-    // Calculate hours, minutes and remaining seconds
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const remainingSeconds = totalSeconds % 60;
-    
-    // Pad with leading zeros
-    const paddedSeconds = remainingSeconds.toString().padStart(2, '0');
-    
-    if (hours > 0) {
-        // Format as H:MM:SS for videos longer than an hour
-        const paddedMinutes = minutes.toString().padStart(2, '0');
-        return `${hours}:${paddedMinutes}:${paddedSeconds}`;
-    } else {
-        // Format as MM:SS for videos under an hour
-        return `${minutes}:${paddedSeconds}`;
-    }
-}
+// formatTime is now imported from './utils/time-utils.js'
 
 /**
  * Load a video into the viewer iframe
