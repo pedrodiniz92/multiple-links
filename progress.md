@@ -97,6 +97,21 @@
   - Enhanced link card click handling
   - Added YouTube URL detection and special handling
 
+### Step 7: services/video-info.js
+- Implemented comprehensive video information handling:
+  - Video title fetching with multiple fallback methods
+  - Video duration fetching with pattern matching
+  - Multi-level caching system (memory and localStorage)
+  - Error handling with graceful degradation
+  - HTML entity decoding for proper title display
+  - Heuristic-based estimation for unavailable information
+- Updated app.js to use video-info.js:
+  - Enhanced card display with fetched video titles
+  - Automatic title display for YouTube links
+  - Dynamic duration display when available
+  - Always show timestamps (e.g., "0:00 - 3:32") instead of video titles in link cards
+  - Support for custom titles alongside fetched information
+
 ## What to Test
 - Enter plain text in the URL input and click "Go":
   - Text should appear as cards in the left panel
@@ -133,6 +148,12 @@
   - Try: `https://www.youtube.com/watch?v=12345&start=60&end=120`
   - Card should display concise formatted timestamps (e.g., "4:45 - 6:30" or "1:04:12 - 1:05:17" for longer videos)
   - Video should start at the specified time when clicked
+- Test Video Title and Duration Fetching:
+  - Enter a well-known YouTube URL (e.g., "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+  - The video title should appear above the card(s) for that video
+  - After a short delay, the card should display the title and duration
+  - Try reloading the page and adding the same link again - title should load faster from cache
+  - Try a mix of known and unknown videos to test all fallback methods
 
 ## Next Step
-Step 7: Implement services/video-info.js with video title and duration fetching functionality, including caching mechanisms.
+Step 8: Implement ui/theme-manager.js with theme preference loading/saving, toggling functionality, and theme-related UI updates.

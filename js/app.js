@@ -28,6 +28,12 @@ import {
     extractYouTubeInfo,
     generateYouTubeEmbedUrl
 } from './services/youtube-service.js';
+import {
+    fetchVideoTitle,
+    getVideoDuration,
+    getVideoDetails,
+    storeCustomVideoTitle
+} from './services/video-info.js';
 
 // DOM elements
 let resizer, leftPanel, rightPanel, goButton, linksContainer, viewer;
@@ -130,8 +136,39 @@ async function processLinks() {
             
             // Extract YouTube info if it's a YouTube URL
             let videoInfo = null;
+            let videoTitle = null;
+            
+            // If there is a custom title in the link, use it for display
+            if (item.hasCustomTitle && item.customTitle) {
+                videoTitle = item.customTitle;
+            }
+            
+            // If it's a YouTube URL, get detailed info
             if (isYouTubeUrl(item.link)) {
                 videoInfo = extractYouTubeInfo(item.link);
+                
+                // If no custom title was provided, try to display the video title from YouTube if available
+                if (!item.hasCustomTitle && videoInfo && videoInfo.videoId) {
+                    // For title display in the title element, fetch video title in background
+                    fetchVideoTitle(videoInfo.videoId).then(title => {
+                        if (!item.hasCustomTitle && title) {
+                            // Create a video title element if it doesn't already exist
+                            if (!document.querySelector(`.video-title[data-video-id="${videoInfo.videoId}"]`)) {
+                                const titleElement = document.createElement('div');
+                                titleElement.className = 'video-title';
+                                titleElement.textContent = title;
+                                titleElement.dataset.videoId = videoInfo.videoId;
+                                
+                                // If the card is still in the DOM, add the title before it
+                                if (document.contains(card) && card.parentNode) {
+                                    card.parentNode.insertBefore(titleElement, card);
+                                }
+                            }
+                        }
+                    }).catch(e => {
+                        console.warn('Error fetching video title:', e);
+                    });
+                }
             }
             
             // Then create the link card (without the title in the card itself)
@@ -148,9 +185,55 @@ async function processLinks() {
                 getFormattedDisplay: async (link) => {
                     // If it's a YouTube URL with time parameters, format the display
                     if (videoInfo && videoInfo.videoId) {
-                        const { params } = videoInfo;
-                        let formattedTime = '';
+                        const { videoId, params } = videoInfo;
                         
+                        // First try to get the video title if possible
+                        try {
+                            // Get video details in the background
+                            getVideoDetails(videoId).then(details => {
+                                if (details) {
+                                    // Format the display text based on timestamps
+                                    let displayText;
+                                    
+                                    // Always prioritize showing timestamps 
+                                    // Start time only
+                                    if (params.start && !params.end) {
+                                        displayText = formatTime(params.start);
+                                    }
+                                    // Both start and end times
+                                    else if (params.start && params.end) {
+                                        displayText = `${formatTime(params.start)} - ${formatTime(params.end)}`;
+                                    }
+                                    // End time only
+                                    else if (!params.start && params.end) {
+                                        displayText = `0:00 - ${formatTime(params.end)}`;
+                                    }
+                                    // Full video case - show 0:00 to end
+                                    else if (details.durationSeconds) {
+                                        displayText = `0:00 - ${formatTime(details.durationSeconds)}`;
+                                    }
+                                    // Fallback to title with duration
+                                    else if (details.title) {
+                                        displayText = details.title;
+                                        if (details.formattedDuration) {
+                                            displayText += ` (${details.formattedDuration})`;
+                                        }
+                                    }
+                                    
+                                    // Update the card content if it's still in the DOM
+                                    if (document.contains(card)) {
+                                        const contentElement = card.querySelector('.card-content');
+                                        if (contentElement) {
+                                            contentElement.textContent = displayText;
+                                        }
+                                    }
+                                }
+                            });
+                        } catch (e) {
+                            console.warn('Error fetching video details:', e);
+                        }
+                        
+                        // Meanwhile, show an initial display
                         // Start time only
                         if (params.start && !params.end) {
                             return formatTime(params.start);
@@ -163,8 +246,11 @@ async function processLinks() {
                         
                         // End time only
                         if (!params.start && params.end) {
-                            return `- ${formatTime(params.end)}`;
+                            return `0:00 - ${formatTime(params.end)}`;
                         }
+                        
+                        // No timestamps yet, show loading indicator (will be replaced with full duration)
+                        return 'Loading timestamp...';
                     }
                     
                     // If there's a custom title, use it
