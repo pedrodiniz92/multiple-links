@@ -37,10 +37,15 @@ import {
 import initThemeManager from './ui/theme-manager.js';
 import initFeedback from './ui/feedback.js';
 import initResponsiveUI from './ui/responsive-ui.js';
+import initRichEditor from './editor/rich-editor.js';
 
 // DOM elements
 let resizer, leftPanel, rightPanel, goButton, linksContainer, viewer;
 let clipboardFeedback, themeToggleIcon, htmlElement, urlInput, inputSection;
+let richEditor, editorContainer, addYouTubeBtn;
+
+// Rich editor instance
+let richEditorInstance;
 
 // Initialize DOM elements
 function initDOMElements() {
@@ -60,6 +65,11 @@ function initDOMElements() {
     htmlElement = document.documentElement;
     urlInput = document.getElementById('url-input');
     inputSection = document.querySelector('.input-section');
+    
+    // Rich editor elements
+    richEditor = document.getElementById('rich-editor');
+    editorContainer = document.getElementById('editor-container');
+    addYouTubeBtn = document.getElementById('add-youtube-link');
 }
 
 // Toggle visibility of the input section
@@ -303,17 +313,26 @@ function setupEventListeners() {
                 // Get current links and text from cards
                 const contents = getCurrentLinksFromCards(linksContainer);
                 
-                // Set the input value to the current content
-                if (urlInput && contents.length > 0) {
-                    urlInput.value = contents.join('\n');
+                if (contents.length > 0) {
+                    const joinedContent = contents.join('\n');
+                    
+                    // Set content in rich editor if available
+                    if (richEditorInstance && richEditorInstance.getQuill()) {
+                        richEditorInstance.setQuillContent(joinedContent);
+                    } else if (urlInput) {
+                        // Fallback to textarea
+                        urlInput.value = joinedContent;
+                    }
                 }
             }
             
             // Show the input section
             toggleInputSection(true);
             
-            // Focus the input
-            if (urlInput) {
+            // Focus the editor
+            if (richEditorInstance) {
+                richEditorInstance.focus();
+            } else if (urlInput) {
                 urlInput.focus();
             }
         });
@@ -473,20 +492,50 @@ function loadVideo(url) {
     }
 }
 
-// Initialize rich text editor (placeholder for future implementation)
+// Initialize rich text editor
 function initRichTextEditor() {
-    console.log('Rich text editor will be implemented in Step 11');
+    console.log('Initializing rich text editor...');
     
-    // Make sure the textarea is visible and working for now
-    const urlInput = document.getElementById('url-input');
-    if (urlInput) {
-        urlInput.style.display = 'block';
+    if (!richEditor || !urlInput || !editorContainer) {
+        console.error('Required DOM elements for rich editor not found');
+        
+        // Fallback to textarea if rich editor can't be initialized
+        if (urlInput) {
+            urlInput.style.display = 'block';
+        }
+        
+        return false;
     }
     
-    // Hide the rich editor until it's implemented
-    const richEditor = document.getElementById('rich-editor');
-    if (richEditor) {
-        richEditor.style.display = 'none';
+    // Initialize the rich editor module
+    richEditorInstance = initRichEditor({
+        editorContainer,
+        richEditor,
+        urlInput,
+        addYouTubeBtn,
+        onContentChange: (content) => {
+            // Optional callback when content changes
+            // Could be used for auto-saving or other features
+        }
+    });
+    
+    // Initialize the editor
+    if (richEditorInstance) {
+        const initSuccess = richEditorInstance.initialize();
+        
+        if (!initSuccess) {
+            console.error('Failed to initialize rich editor, falling back to textarea');
+            // Show textarea as fallback
+            urlInput.style.display = 'block';
+            return false;
+        }
+        
+        return true;
+    } else {
+        console.error('Rich editor instance could not be created');
+        // Fallback to textarea
+        urlInput.style.display = 'block';
+        return false;
     }
 }
 
@@ -496,9 +545,14 @@ async function handleUrlParams() {
     
     // Use the url-service module to parse URL parameters
     const urlContent = await parseUrlParams(async (content) => {
-        if (content && urlInput) {
-            // Set the input value to the content from URL parameters
-            urlInput.value = content;
+        if (content) {
+            if (richEditorInstance && richEditorInstance.getQuill()) {
+                // Set content in rich editor if available
+                richEditorInstance.setQuillContent(content);
+            } else if (urlInput) {
+                // Fallback to textarea
+                urlInput.value = content;
+            }
             
             // Process the links from the URL parameters
             await processLinks();
