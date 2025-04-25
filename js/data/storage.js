@@ -1,0 +1,1 @@
+// LocalStorage wrapper functions
