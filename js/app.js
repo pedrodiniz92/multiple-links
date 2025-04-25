@@ -35,6 +35,7 @@ import {
     storeCustomVideoTitle
 } from './services/video-info.js';
 import initThemeManager from './ui/theme-manager.js';
+import initFeedback from './ui/feedback.js';
 
 // DOM elements
 let resizer, leftPanel, rightPanel, goButton, linksContainer, viewer;
@@ -330,25 +331,41 @@ function setupEventListeners() {
                     // Generate shareable URL from the current content
                     const shareableUrl = generateShareableUrl(contents.join('\n'));
                     
-                    // Copy to clipboard
-                    navigator.clipboard.writeText(shareableUrl)
-                        .then(() => {
-                            // Show feedback to user
-                            if (clipboardFeedback) {
-                                clipboardFeedback.textContent = 'Shareable link copied to clipboard!';
-                                clipboardFeedback.style.opacity = 1;
+                    // If we have the feedback system initialized, use it
+                    if (feedbackSystem) {
+                        feedbackSystem.copyToClipboard(
+                            shareableUrl, 
+                            'Link copied!'
+                        );
+                        
+                        // Update browser URL without reloading the page
+                        window.history.pushState({}, '', shareableUrl);
+                        
+                        console.log('Shareable URL copied to clipboard using feedback system');
+                    } else {
+                        // Fallback to direct clipboard API if feedback system isn't ready
+                        navigator.clipboard.writeText(shareableUrl)
+                            .then(() => {
+                                // Show feedback to user
+                                if (clipboardFeedback) {
+                                    clipboardFeedback.textContent = 'Link copied!';
+                                    clipboardFeedback.style.opacity = 1;
+                                    
+                                    // Hide the feedback after 1.7 seconds
+                                    setTimeout(() => {
+                                        clipboardFeedback.style.opacity = 0;
+                                    }, 1700);
+                                }
                                 
-                                // Hide the feedback after 2 seconds
-                                setTimeout(() => {
-                                    clipboardFeedback.style.opacity = 0;
-                                }, 2000);
-                            }
-                            
-                            console.log('Shareable URL copied to clipboard:', shareableUrl);
-                        })
-                        .catch(err => {
-                            console.error('Failed to copy to clipboard:', err);
-                        });
+                                // Update browser URL without reloading the page
+                                window.history.pushState({}, '', shareableUrl);
+                                
+                                console.log('Shareable URL copied to clipboard:', shareableUrl);
+                            })
+                            .catch(err => {
+                                console.error('Failed to copy to clipboard:', err);
+                            });
+                    }
                 }
             }
         });
@@ -467,8 +484,9 @@ async function handleUrlParams() {
     return urlContent !== null;
 }
 
-// Global reference to the theme manager
+// Global references
 let themeManager;
+let feedbackSystem;
 
 // Main initialization function
 function initApplication() {
@@ -479,6 +497,9 @@ function initApplication() {
     
     // Initialize theme manager
     initializeThemeManager();
+    
+    // Initialize feedback system
+    initializeFeedbackSystem();
     
     // Set up core functionality
     initPanelResizing();
@@ -503,6 +524,27 @@ function initializeThemeManager() {
         }
     } else {
         console.error('Required DOM elements for theme manager not found');
+    }
+}
+
+// Initialize the feedback system
+function initializeFeedbackSystem() {
+    if (clipboardFeedback) {
+        // Get the modal feedback element if it exists
+        const modalFeedback = document.getElementById('modal-title-feedback');
+        
+        feedbackSystem = initFeedback({
+            clipboardFeedback,
+            modalFeedback
+        });
+        
+        if (feedbackSystem) {
+            console.log('Feedback system initialized successfully');
+        } else {
+            console.error('Failed to initialize feedback system');
+        }
+    } else {
+        console.error('Required DOM elements for feedback system not found');
     }
 }
 
