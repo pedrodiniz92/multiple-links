@@ -43,18 +43,18 @@ After you implement each step, write on progress.md what step you have done and 
 - Create the file structure listed above
 - Ensure index.html points to the app.js in the proper location.
 
-### Step 1. app.js
+### Step 1. components/panel-resizer.js
+- Panel resizing event listeners and calculations
+- Handling minimum and maximum sizes
+- Coordination with responsive UI updates
+- **Lines in backup-app.js**: 22-48 (resize event listeners and calculations)
+
+### Step 2. app.js
 - DOM elements initialization
 - Event listener setup (high-level)
 - Module orchestration
 - Page load initialization
 - **Lines in backup-app.js**: 1-13 (DOM elements), 439-444 (Go button event), 2319-2341 (page load initialization)
-
-### Step 2. components/panel-resizer.js
-- Panel resizing event listeners and calculations
-- Handling minimum and maximum sizes
-- Coordination with responsive UI updates
-- **Lines in backup-app.js**: 22-48 (resize event listeners and calculations)
 
 ### Step 3. components/card-manager.js
 - Card counter management
