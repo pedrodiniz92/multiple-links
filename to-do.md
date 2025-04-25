@@ -6,6 +6,7 @@ Then, you will find the steps.
 
 ## IMPORTANT
 We will perform each step at a time. 
+Backup-app.js is there just for reference. We are not going to reference it in our code anymore.
 After you implement each step, write on progress.md what step you have done and what functions I have to test before we can move forward to the next step.
 
 ## File Structure
@@ -40,9 +41,9 @@ After you implement each step, write on progress.md what step you have done and 
 
 ### Step 0. File structure
 - Create the file structure listed above
+- Ensure index.html points to the app.js in the proper location.
 
 ### Step 1. app.js
-- Ensuring index.html points to the app.js in the proper location.
 - DOM elements initialization
 - Event listener setup (high-level)
 - Module orchestration
