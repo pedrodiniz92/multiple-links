@@ -1,0 +1,1 @@
+Use app.md and app.js as sreference: Read js-files.md and append, to the end of each step, which lines of app.js cover those functions.
