@@ -222,16 +222,27 @@
   - Verify that very narrow widths still maintain usable icon sizes (min 85% scale)
   - Check that the toolbar layout remains visually balanced at all sizes
   
-- Test Rich Text Editor (New for Step 11):
+- Test Rich Text Editor (Step 11):
   - Verify that rich text editor is displayed instead of textarea
   - Test formatting options (bold, italic, underline, strikethrough)
   - Test text and background color selectors
   - Enter formatted text and verify it's properly displayed in cards
   - Test headers with formatting (make text starting with # italic and verify it still displays as a header card)
-  - Test YouTube link button functionality (opens modal but doesn't yet handle adding links)
   - Test editing existing content (click edit icon, verify content loads correctly in editor)
   - Check that it gracefully falls back to textarea if initialization fails
   - Test URL parameters handling - content should load properly in the rich editor
+
+- Test YouTube Modal (New for Step 12):
+  - Click the YouTube button in the editor toolbar to open the modal
+  - Test entering a YouTube URL and fetching the title with the "Fetch Title" button
+  - Verify that error messages appear when entering invalid URLs
+  - Test the Line Break button in the context field (should insert // at cursor position)
+  - Test keyboard navigation: Enter in URL field should fetch title, Enter in context field should move to title field
+  - Enter start and end times in various formats (MM:SS and H:MM:SS)
+  - Test validation of start/end times (end time must be later than start time)
+  - Test inserting a link with custom title and context, verify it appears in the editor with proper formatting
+  - Verify that clicking outside the modal or the Cancel button closes the modal
+  - Test that inserted YouTube links work correctly when cards are created
 
 ### Step 11: editor/rich-editor.js
 - Implemented Quill editor with robust functionality:
@@ -255,5 +266,28 @@
   - Converted HTML content to appropriate format for link processing
   - Fixed issue with italicized headers appearing as HTML tags in cards
 
+### Step 12: editor/youtube-modal.js
+- Implemented YouTube modal functionality:
+  - Complete modal UI management with proper event handling
+  - YouTube URL validation and video ID extraction
+  - Form handling for URL, title, context, and timestamps
+  - Integration with video-info service for title fetching
+  - Proper error handling with visual feedback
+  - Line break button functionality for context formatting (adds two slashes //)
+  - Time format parsing and validation (MM:SS and H:MM:SS formats)
+  - Local storage integration for caching embed URLs and times
+- Updated app.js to integrate youtube-modal.js:
+  - Added initialization of YouTube modal with DOM elements
+  - Connected to rich editor for content insertion
+  - Integrated with feedback system for user notifications
+  - Added proper event wiring between all modal components
+  - Implemented clean event management to prevent duplicate handlers
+- Improved YouTube link handling:
+  - Support for adding custom title and context via the modal
+  - Better UX with autoformatting of timestamps and links
+  - Proper insertion of links at cursor position in rich editor
+  - Preloading of video duration to improve performance
+  - Support for time ranges with start and end times
+
 ## Next Step
-Step 12: Implement editor/youtube-modal.js with YouTube modal UI management, form handling for YouTube links, and integration with video info services.
+Step 13: Implement utils/time-utils.js with time formatting, time string parsing, and time parameter handling.

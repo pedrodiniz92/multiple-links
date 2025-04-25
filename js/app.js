@@ -38,14 +38,20 @@ import initThemeManager from './ui/theme-manager.js';
 import initFeedback from './ui/feedback.js';
 import initResponsiveUI from './ui/responsive-ui.js';
 import initRichEditor from './editor/rich-editor.js';
+import initYouTubeModal from './editor/youtube-modal.js';
 
 // DOM elements
 let resizer, leftPanel, rightPanel, goButton, linksContainer, viewer;
 let clipboardFeedback, themeToggleIcon, htmlElement, urlInput, inputSection;
 let richEditor, editorContainer, addYouTubeBtn;
 
-// Rich editor instance
+// YouTube modal elements
+let youtubeModal, modalFeedback, youtubeUrlInput, youtubeTitleInput, youtubeContextInput;
+let startTimeInput, endTimeInput, fetchTitleBtn, insertLinkBtn, cancelBtn, lineBreakBtn;
+
+// Module instances
 let richEditorInstance;
+let youtubeModalInstance;
 
 // Initialize DOM elements
 function initDOMElements() {
@@ -70,6 +76,19 @@ function initDOMElements() {
     richEditor = document.getElementById('rich-editor');
     editorContainer = document.getElementById('editor-container');
     addYouTubeBtn = document.getElementById('add-youtube-link');
+    
+    // YouTube modal elements
+    youtubeModal = document.getElementById('add-youtube-modal');
+    modalFeedback = document.getElementById('modal-title-feedback');
+    youtubeUrlInput = document.getElementById('youtube-url');
+    youtubeTitleInput = document.getElementById('youtube-title');
+    youtubeContextInput = document.getElementById('youtube-context');
+    startTimeInput = document.getElementById('youtube-start-time');
+    endTimeInput = document.getElementById('youtube-end-time');
+    fetchTitleBtn = document.getElementById('fetch-youtube-title-btn');
+    insertLinkBtn = document.getElementById('insert-youtube-link-btn');
+    cancelBtn = document.getElementById('cancel-youtube-link-btn');
+    lineBreakBtn = document.getElementById('add-linebreak-btn');
 }
 
 // Toggle visibility of the input section
@@ -530,11 +549,79 @@ function initRichTextEditor() {
             return false;
         }
         
+        // Initialize YouTube modal after editor is ready
+        initYouTubeModalDialog();
+        
         return true;
     } else {
         console.error('Rich editor instance could not be created');
         // Fallback to textarea
         urlInput.style.display = 'block';
+        return false;
+    }
+}
+
+// Initialize YouTube link modal
+function initYouTubeModalDialog() {
+    console.log('Initializing YouTube modal dialog...');
+    
+    if (!youtubeModal || !modalFeedback || !youtubeUrlInput || !richEditorInstance) {
+        console.error('Required DOM elements for YouTube modal not found or rich editor not initialized');
+        return false;
+    }
+    
+    // Initialize the YouTube modal module
+    youtubeModalInstance = initYouTubeModal({
+        modalElement: youtubeModal,
+        modalFeedback,
+        youtubeUrlInput,
+        youtubeTitleInput,
+        youtubeContextInput,
+        startTimeInput,
+        endTimeInput,
+        fetchTitleBtn,
+        insertLinkBtn,
+        cancelBtn,
+        lineBreakBtn,
+        richEditorInstance,
+        showFeedbackMessage: (element, isModal = false) => {
+            // Use the feedback system if available, or create a simple animation otherwise
+            if (feedbackSystem && typeof feedbackSystem.showFeedbackMessage === 'function') {
+                feedbackSystem.showFeedbackMessage(element, isModal);
+            } else {
+                // Fallback animation
+                element.style.display = 'block';
+                element.style.opacity = '1';
+                
+                setTimeout(() => {
+                    element.style.opacity = '0';
+                    setTimeout(() => {
+                        element.style.display = 'none';
+                    }, 500);
+                }, 2000);
+            }
+        }
+    });
+    
+    // Wire up the YouTube button to show the modal
+    if (addYouTubeBtn && youtubeModalInstance) {
+        // Remove any existing listeners to avoid duplicates
+        const newYouTubeBtn = addYouTubeBtn.cloneNode(true);
+        if (addYouTubeBtn.parentNode) {
+            addYouTubeBtn.parentNode.replaceChild(newYouTubeBtn, addYouTubeBtn);
+            // Update the reference
+            addYouTubeBtn = newYouTubeBtn;
+        }
+        
+        // Add click event to show the modal
+        addYouTubeBtn.addEventListener('click', () => {
+            youtubeModalInstance.showModal();
+        });
+        
+        console.log('YouTube modal initialized successfully');
+        return true;
+    } else {
+        console.error('YouTube modal initialization failed');
         return false;
     }
 }
