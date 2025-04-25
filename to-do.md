@@ -48,6 +48,7 @@ After you implement each step, write on progress.md what step you have done and 
 - Handling minimum and maximum sizes
 - Coordination with responsive UI updates
 - **Lines in backup-app.js**: 22-48 (resize event listeners and calculations)
+- **Important** for this step, we'll use the material from /test/panel-resize-inspiration.js
 
 ### Step 2. app.js
 - DOM elements initialization
