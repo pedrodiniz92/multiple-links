@@ -70,6 +70,33 @@
   - Custom titles are displayed in separate "video-title" elements above the cards
   - Improved error handling and validation
 
+### Step 5: services/url-service.js
+- Implemented comprehensive URL handling functionality:
+  - URL validation with proper error handling
+  - URL parameter parsing and handling
+  - Shareable URL generation with content encoding
+  - URL cleanup to remove tracking parameters
+  - URL normalization to ensure proper formatting
+- Updated app.js to use the url-service module:
+  - Added share icon functionality to generate shareable URLs
+  - Implemented URL parameter handling on page load
+  - Added clipboard integration for sharing
+  - Enhanced user feedback for sharing operations
+  
+### Step 6: services/youtube-service.js
+- Implemented YouTube-specific functionality:
+  - Robust multi-method YouTube video ID extraction
+  - Time parameter parsing (start/end timestamps)
+  - YouTube embed URL generation with proper parameters
+  - Iframe management for loading YouTube videos
+  - Error handling and recovery strategies
+  - Local storage integration for video timestamps
+- Updated app.js to use the youtube-service module:
+  - Added loadVideo function using the YouTube service
+  - Implemented formatTime function for timestamp display
+  - Enhanced link card click handling
+  - Added YouTube URL detection and special handling
+
 ## What to Test
 - Enter plain text in the URL input and click "Go":
   - Text should appear as cards in the left panel
@@ -88,6 +115,24 @@
   - URLs with &amp; should be correctly processed
 - Verify that invalid URLs are handled properly:
   - They should be treated as text instead of links
+- Test sharing functionality:
+  - Create some cards and click the share icon
+  - Verify the clipboard feedback appears
+  - Paste the URL in a new browser tab
+  - The same cards should be recreated in the new tab
+- Test URL parameters:
+  - Manually add ?urls=... to the URL with encoded content
+  - Verify the app processes and displays the content properly
+- Test YouTube video loading:
+  - Enter a YouTube URL and click "Go"
+  - Click on the created card
+  - The YouTube video should load in the right panel iframe
+  - Try URLs with different formats (youtube.com/watch?v=, youtu.be/, etc.)
+- Test YouTube timestamp parameters:
+  - Try: `https://www.youtube.com/watch?v=12345&t=30`
+  - Try: `https://www.youtube.com/watch?v=12345&start=60&end=120`
+  - Card should display concise formatted timestamps (e.g., "4:45 - 6:30" or "1:04:12 - 1:05:17" for longer videos)
+  - Video should start at the specified time when clicked
 
 ## Next Step
-Step 5: Implement services/url-service.js with URL validation, parameter handling, shareable URL generation, and URL cleanup/normalization.
+Step 7: Implement services/video-info.js with video title and duration fetching functionality, including caching mechanisms.

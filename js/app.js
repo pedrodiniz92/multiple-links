@@ -12,10 +12,22 @@ import {
 } from './components/card-manager.js';
 import {
     parseLinkWithTitle,
-    isValidUrl,
     fixHtmlEntitiesInUrls,
     processInputText
 } from './components/link-processor.js';
+import {
+    isValidUrl,
+    normalizeUrl,
+    generateShareableUrl,
+    parseUrlParams,
+    cleanupUrl
+} from './services/url-service.js';
+import {
+    isYouTubeUrl,
+    loadYouTubeVideo,
+    extractYouTubeInfo,
+    generateYouTubeEmbedUrl
+} from './services/youtube-service.js';
 
 // DOM elements
 let resizer, leftPanel, rightPanel, goButton, linksContainer, viewer;
@@ -116,6 +128,12 @@ async function processLinks() {
                 linksContainer.appendChild(titleElement);
             }
             
+            // Extract YouTube info if it's a YouTube URL
+            let videoInfo = null;
+            if (isYouTubeUrl(item.link)) {
+                videoInfo = extractYouTubeInfo(item.link);
+            }
+            
             // Then create the link card (without the title in the card itself)
             const card = createLinkCard({
                 originalInput: item.originalInput,
@@ -124,11 +142,37 @@ async function processLinks() {
                 customContext: item.customContext,
                 onCardClick: (videoLink) => {
                     console.log('Card clicked, video link:', videoLink);
-                    // In a future step, this will call loadVideo from the video service
+                    // Load the video into the iframe
+                    loadVideo(videoLink);
                 },
                 getFormattedDisplay: async (link) => {
-                    // For now, just show a simplified display with the URL or timestamp
-                    // In future steps, this will be replaced with proper timestamp formatting
+                    // If it's a YouTube URL with time parameters, format the display
+                    if (videoInfo && videoInfo.videoId) {
+                        const { params } = videoInfo;
+                        let formattedTime = '';
+                        
+                        // Start time only
+                        if (params.start && !params.end) {
+                            return formatTime(params.start);
+                        }
+                        
+                        // Both start and end times
+                        if (params.start && params.end) {
+                            return `${formatTime(params.start)} - ${formatTime(params.end)}`;
+                        }
+                        
+                        // End time only
+                        if (!params.start && params.end) {
+                            return `- ${formatTime(params.end)}`;
+                        }
+                    }
+                    
+                    // If there's a custom title, use it
+                    if (item.hasCustomTitle && item.customTitle) {
+                        return item.customTitle;
+                    }
+                    
+                    // Fallback to a truncated URL
                     return link.substring(0, 50) + (link.length > 50 ? '...' : '');
                 }
             });
@@ -185,6 +229,43 @@ function setupEventListeners() {
             }
         });
     }
+    
+    // Share icon listener - generate shareable URL
+    const shareIcon = document.getElementById('share-icon');
+    if (shareIcon) {
+        shareIcon.addEventListener('click', () => {
+            // Only generate a URL if we have content
+            if (linksContainer && linksContainer.children.length > 0) {
+                // Get current links and text from cards
+                const contents = getCurrentLinksFromCards(linksContainer);
+                
+                if (contents.length > 0) {
+                    // Generate shareable URL from the current content
+                    const shareableUrl = generateShareableUrl(contents.join('\n'));
+                    
+                    // Copy to clipboard
+                    navigator.clipboard.writeText(shareableUrl)
+                        .then(() => {
+                            // Show feedback to user
+                            if (clipboardFeedback) {
+                                clipboardFeedback.textContent = 'Shareable link copied to clipboard!';
+                                clipboardFeedback.style.opacity = 1;
+                                
+                                // Hide the feedback after 2 seconds
+                                setTimeout(() => {
+                                    clipboardFeedback.style.opacity = 0;
+                                }, 2000);
+                            }
+                            
+                            console.log('Shareable URL copied to clipboard:', shareableUrl);
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy to clipboard:', err);
+                        });
+                }
+            }
+        });
+    }
 }
 
 // Initialize responsive toolbar (placeholder for future implementation)
@@ -195,6 +276,70 @@ function initResponsiveToolbar() {
 // Update icon sizes (placeholder for future implementation)
 function updateIconSizes() {
     console.log('Icon sizes update will be implemented in a future step');
+}
+
+/**
+ * Format a time in seconds to a readable format (H:MM:SS or MM:SS)
+ * @param {number} seconds - The time in seconds
+ * @returns {string} - Formatted time string
+ */
+function formatTime(seconds) {
+    if (!seconds && seconds !== 0) return '';
+    
+    // Convert to number if it's a string
+    const totalSeconds = parseInt(seconds, 10);
+    
+    // Calculate hours, minutes and remaining seconds
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remainingSeconds = totalSeconds % 60;
+    
+    // Pad with leading zeros
+    const paddedSeconds = remainingSeconds.toString().padStart(2, '0');
+    
+    if (hours > 0) {
+        // Format as H:MM:SS for videos longer than an hour
+        const paddedMinutes = minutes.toString().padStart(2, '0');
+        return `${hours}:${paddedMinutes}:${paddedSeconds}`;
+    } else {
+        // Format as MM:SS for videos under an hour
+        return `${minutes}:${paddedSeconds}`;
+    }
+}
+
+/**
+ * Load a video into the viewer iframe
+ * @param {string} url - The URL to load
+ * @returns {boolean} - True if loading was successful
+ */
+function loadVideo(url) {
+    if (!url || !viewer) {
+        console.error('Invalid URL or viewer iframe not found');
+        return false;
+    }
+    
+    console.log('Loading video:', url);
+    
+    // Check if it's a YouTube URL
+    if (isYouTubeUrl(url)) {
+        return loadYouTubeVideo(url, viewer);
+    } else {
+        // For non-YouTube URLs, load directly
+        try {
+            // Ensure URL uses HTTPS for security
+            let secureUrl = url;
+            if (url.startsWith('http:')) {
+                secureUrl = url.replace('http:', 'https:');
+                console.log('Upgrading URL to HTTPS for security');
+            }
+            
+            viewer.src = secureUrl;
+            return true;
+        } catch (error) {
+            console.error('Error loading non-YouTube URL:', error);
+            return false;
+        }
+    }
 }
 
 // Initialize rich text editor (placeholder for future implementation)
@@ -214,9 +359,25 @@ function initRichTextEditor() {
     }
 }
 
-// Parse URL parameters (placeholder for future implementation)
-function parseUrlParams() {
-    console.log('URL parameter parsing will be implemented in a future step');
+// Parse URL parameters from the query string
+async function handleUrlParams() {
+    console.log('Parsing URL parameters...');
+    
+    // Use the url-service module to parse URL parameters
+    const urlContent = await parseUrlParams(async (content) => {
+        if (content && urlInput) {
+            // Set the input value to the content from URL parameters
+            urlInput.value = content;
+            
+            // Process the links from the URL parameters
+            await processLinks();
+            
+            // Hide the input section after processing
+            toggleInputSection(false);
+        }
+    });
+    
+    return urlContent !== null;
 }
 
 // Main initialization function
@@ -237,12 +398,12 @@ function initApplication() {
 document.addEventListener('DOMContentLoaded', initApplication);
 
 // Execute on page load for components that need the full page to be loaded
-window.addEventListener('load', function() {
+window.addEventListener('load', async function() {
     // Initialize the rich text editor
     initRichTextEditor();
     
     // Parse URL parameters if present
-    parseUrlParams();
+    await handleUrlParams();
     
     // Initialize responsive toolbar
     initResponsiveToolbar();
