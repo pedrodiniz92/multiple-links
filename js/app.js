@@ -36,6 +36,7 @@ import {
 } from './services/video-info.js';
 import initThemeManager from './ui/theme-manager.js';
 import initFeedback from './ui/feedback.js';
+import initResponsiveUI from './ui/responsive-ui.js';
 
 // DOM elements
 let resizer, leftPanel, rightPanel, goButton, linksContainer, viewer;
@@ -372,14 +373,40 @@ function setupEventListeners() {
     }
 }
 
-// Initialize responsive toolbar (placeholder for future implementation)
+// Initialize responsive toolbar 
 function initResponsiveToolbar() {
-    console.log('Responsive toolbar will be implemented in a future step');
+    const toolbar = document.querySelector('.toolbar-container');
+    const toolbarIcons = document.querySelectorAll('.toolbar-icon');
+    const iconImages = document.querySelectorAll('.toolbar-icon img, .theme-icon-light, .theme-icon-dark');
+    
+    if (toolbar && toolbarIcons.length > 0) {
+        responsiveUI = initResponsiveUI({
+            toolbar,
+            toolbarIcons,
+            iconImages,
+            sizes: {
+                defaultIconSize: 36, // px
+                defaultImageSize: 20, // px
+                minScale: 0.85     // Minimum scaling factor (85%)
+            }
+        });
+        
+        if (responsiveUI) {
+            responsiveUI.initialize();
+            console.log('Responsive toolbar initialized successfully');
+        } else {
+            console.error('Failed to initialize responsive toolbar');
+        }
+    } else {
+        console.error('Required DOM elements for responsive toolbar not found');
+    }
 }
 
-// Update icon sizes (placeholder for future implementation)
+// Update icon sizes - Forwards to the responsive UI module
 function updateIconSizes() {
-    console.log('Icon sizes update will be implemented in a future step');
+    if (responsiveUI) {
+        responsiveUI.updateIconSizes();
+    }
 }
 
 /**
@@ -487,6 +514,7 @@ async function handleUrlParams() {
 // Global references
 let themeManager;
 let feedbackSystem;
+let responsiveUI;
 
 // Main initialization function
 function initApplication() {
@@ -500,6 +528,9 @@ function initApplication() {
     
     // Initialize feedback system
     initializeFeedbackSystem();
+    
+    // Initialize responsive UI components
+    initResponsiveToolbar();
     
     // Set up core functionality
     initPanelResizing();
@@ -562,16 +593,7 @@ window.addEventListener('load', async function() {
     // Initialize responsive toolbar
     initResponsiveToolbar();
     
-    // Also update when panel is resized (using the mouseup event)
-    if (resizer) {
-        resizer.addEventListener('mouseup', function() {
-            // Update immediately and also after a small delay to catch any layout changes
-            updateIconSizes();
-            
-            // Additional update after layout settles
-            setTimeout(updateIconSizes, 100);
-        });
-    }
+    // Responsive UI is already handled by panel resizer's onResize callback
     
     console.log('Page load initialization complete');
 });
