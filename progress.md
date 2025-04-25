@@ -112,6 +112,19 @@
   - Always show timestamps (e.g., "0:00 - 3:32") instead of video titles in link cards
   - Support for custom titles alongside fetched information
 
+### Step 8: ui/theme-manager.js
+- Implemented theme management functionality:
+  - Dark/light theme preference detection and loading
+  - Seamless theme toggling with UI updates
+  - Local storage persistence for theme preference
+  - System theme preference detection (prefers-color-scheme)
+  - Automatic theme application based on user or system preference
+- Updated app.js to use theme-manager.js:
+  - Integrated with DOM elements for theme control
+  - Added theme initialization to application startup
+  - Exposed theme manager API for future component use
+  - Maintained theme state throughout the application lifecycle
+
 ## What to Test
 - Enter plain text in the URL input and click "Go":
   - Text should appear as cards in the left panel
@@ -154,6 +167,11 @@
   - After a short delay, the card should display the title and duration
   - Try reloading the page and adding the same link again - title should load faster from cache
   - Try a mix of known and unknown videos to test all fallback methods
+- Test Theme Management:
+  - Click the theme toggle icon (sun/moon) to switch between light and dark modes
+  - Verify the tooltip text changes appropriately (Light mode/Dark mode)
+  - Refresh the page to confirm the theme preference is saved
+  - Try testing with different system preferences (if possible)
 
 ## Next Step
-Step 8: Implement ui/theme-manager.js with theme preference loading/saving, toggling functionality, and theme-related UI updates.
+Step 9: Implement ui/feedback.js with feedback message system, animation handling for notifications, and clipboard feedback.

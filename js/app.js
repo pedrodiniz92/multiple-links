@@ -34,6 +34,7 @@ import {
     getVideoDetails,
     storeCustomVideoTitle
 } from './services/video-info.js';
+import initThemeManager from './ui/theme-manager.js';
 
 // DOM elements
 let resizer, leftPanel, rightPanel, goButton, linksContainer, viewer;
@@ -466,6 +467,9 @@ async function handleUrlParams() {
     return urlContent !== null;
 }
 
+// Global reference to the theme manager
+let themeManager;
+
 // Main initialization function
 function initApplication() {
     console.log('Initializing application...');
@@ -473,11 +477,33 @@ function initApplication() {
     // Initialize DOM elements first
     initDOMElements();
     
+    // Initialize theme manager
+    initializeThemeManager();
+    
     // Set up core functionality
     initPanelResizing();
     setupEventListeners();
     
     console.log('Core application initialization complete');
+}
+
+// Initialize the theme manager
+function initializeThemeManager() {
+    if (htmlElement && themeToggleIcon) {
+        themeManager = initThemeManager({
+            htmlElement,
+            themeToggleIcon
+        });
+        
+        if (themeManager) {
+            themeManager.initialize();
+            console.log('Theme manager initialized successfully');
+        } else {
+            console.error('Failed to initialize theme manager');
+        }
+    } else {
+        console.error('Required DOM elements for theme manager not found');
+    }
 }
 
 // Initialize when the DOM is fully loaded
