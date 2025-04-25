@@ -42,6 +42,7 @@ After you implement each step, write on progress.md what step you have done and 
 - Create the file structure listed above
 
 ### Step 1. app.js
+- Ensuring index.html points to the app.js in the proper location.
 - DOM elements initialization
 - Event listener setup (high-level)
 - Module orchestration
