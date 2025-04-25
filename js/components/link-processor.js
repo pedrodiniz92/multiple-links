@@ -3,30 +3,8 @@
  * Handles link parsing, title/context tags, and link validation
  */
 
-/**
- * Fix HTML entities in URLs (like &amp; to &)
- * @param {string} text - The text containing URLs with HTML entities
- * @returns {string} - The text with HTML entities in URLs fixed
- */
-function fixHtmlEntitiesInUrls(text) {
-    // Look for URL patterns and fix any HTML entities within them
-    let fixedText = text;
-    
-    // Define a regex to match URLs
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    
-    // Replace any HTML entities in the URLs
-    fixedText = fixedText.replace(urlRegex, (match) => {
-        return match
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'");
-    });
-    
-    return fixedText;
-}
+// Import the HTML utilities 
+import { fixHtmlEntitiesInUrls } from '../utils/html-utils.js';
 
 /**
  * Check if a string is a valid URL
@@ -112,10 +90,8 @@ function parseLinkWithTitle(input) {
     // Update link to the current state after processing all tags
     link = currentLink;
     
-    // If no title tag was found, skip the title
-    if (!hasCustomTitle) {
-        skipTitle = true;
-    }
+    // Always skip title unless a non-empty title tag was found
+    skipTitle = !hasCustomTitle || customTitle === '';
     
     return {
         hasCustomTitle,

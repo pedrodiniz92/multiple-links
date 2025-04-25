@@ -328,5 +328,38 @@
   - Add the same YouTube link again without timestamps
   - The previously stored timestamps should still be used for playback
 
+### Step 14: utils/html-utils.js
+- Implemented comprehensive HTML utility module with functions:
+  - fixHtmlEntitiesInUrls - Fixes HTML entities in URLs (like &amp; to &)
+  - decodeHTMLEntities - Decodes all HTML entities to their corresponding characters
+  - escapeHtml - Escapes HTML special characters to prevent XSS
+  - stripHtmlTags - Removes HTML tags from a string
+  - htmlToText - Converts HTML content to plain text
+  - containsHtml - Checks if a string contains HTML tags
+- Centralized HTML manipulation across the application:
+  - Updated link-processor.js to use fixHtmlEntitiesInUrls
+  - Modified rich-editor.js to use fixHtmlEntitiesInUrls and escapeHtml
+  - Enhanced youtube-modal.js with decodeHTMLEntities
+  - Removed duplicate implementations to improve code maintainability
+  - Ensured consistent HTML processing throughout the application
+- Improved security and data integrity with proper HTML escaping
+- Enhanced code organization by consolidating common HTML utility functions
+
+#### What to Test for Step 14
+- Test HTML entity handling in URLs:
+  - Enter a URL with encoded entities (e.g., "https://example.com?param1=value&amp;param2=value")
+  - Verify the URL is processed correctly with proper parameter separation
+- Test HTML entity decoding:
+  - Click the YouTube icon and use "Fetch Title" with a YouTube video URL
+  - Verify that video titles with special characters display correctly (not as HTML entities)
+- Test HTML escaping when editing rich text:
+  - Enter text with special characters (<, >, &, ", ') in the rich editor
+  - Edit an existing card with special characters and verify content loads correctly
+- Test HTML tag stripping:
+  - Enter a mix of text and HTML in the rich editor
+  - Verify that viewing the card content shows properly formatted text without raw HTML tags
+- Test HTML detection:
+  - Try entering HTML content and plain text to ensure proper handling in different contexts
+
 ## Next Step
-Step 14: Implement utils/html-utils.js with HTML entity fixing in URLs, HTML entity decoding, and HTML escaping functionality.
+Step 15: Implement data/storage.js module for improved local storage operations and data persistence.

@@ -3,6 +3,9 @@
  * With improved initialization and error handling based on backup-app.js
  */
 
+// Import HTML utilities
+import { fixHtmlEntitiesInUrls, escapeHtml } from '../utils/html-utils.js';
+
 /**
  * Initialize and set up the Quill rich text editor
  * @param {Object} options - Configuration options
@@ -74,30 +77,7 @@ function initRichEditor(options) {
         return lines.join('\n');
     }
     
-    /**
-     * Helper function to fix HTML entities in URLs
-     * @param {string} text - Text that may contain URLs with HTML entities
-     * @returns {string} - Text with fixed URLs
-     */
-    function fixHtmlEntitiesInUrls(text) {
-        // Look for URL patterns and fix any HTML entities within them
-        let fixedText = text;
-        
-        // Define a regex to match URLs
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        
-        // Replace any HTML entities in the URLs
-        fixedText = fixedText.replace(urlRegex, (match) => {
-            return match
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&quot;/g, '"')
-                .replace(/&#39;/g, "'");
-        });
-        
-        return fixedText;
-    }
+    // The fixHtmlEntitiesInUrls function is now imported from html-utils.js
     
     /**
      * Set content in the Quill editor
@@ -150,16 +130,7 @@ function initRichEditor(options) {
         }
     }
     
-    /**
-     * Helper function to escape HTML special characters
-     * @param {string} text - Plain text to escape
-     * @returns {string} - HTML-escaped text
-     */
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+    // The escapeHtml function is now imported from html-utils.js
     
     /**
      * Check if Quill is loaded and available

@@ -70,7 +70,7 @@ async function parseUrlParams(callback) {
     
     if (urls && typeof callback === 'function') {
         const decodedContent = decodeURIComponent(urls);
-        callback(decodedContent);
+        await callback(decodedContent);
     }
     
     return urls ? decodeURIComponent(urls) : null;

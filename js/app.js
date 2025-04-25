@@ -12,9 +12,9 @@ import {
 } from './components/card-manager.js';
 import {
     parseLinkWithTitle,
-    fixHtmlEntitiesInUrls,
     processInputText
 } from './components/link-processor.js';
+import { fixHtmlEntitiesInUrls } from './utils/html-utils.js';
 import {
     isValidUrl,
     normalizeUrl,
@@ -153,8 +153,8 @@ async function processLinks() {
             const textCard = createTextCard(item.content);
             linksContainer.appendChild(textCard);
         } else if (item.type === 'link') {
-            // For links, first check if we should display a title
-            if (item.hasCustomTitle && item.customTitle) {
+            // For links, only display a title if there's a custom title with [t:] tag
+            if (item.hasCustomTitle && item.customTitle && !item.skipTitle) {
                 // Create a video title element (will be displayed above the cards)
                 const titleElement = document.createElement('div');
                 titleElement.className = 'video-title';
@@ -179,29 +179,6 @@ async function processLinks() {
             // If it's a YouTube URL, get detailed info
             if (isYouTubeUrl(item.link)) {
                 videoInfo = extractYouTubeInfo(item.link);
-                
-                // If no custom title was provided, try to display the video title from YouTube if available
-                if (!item.hasCustomTitle && videoInfo && videoInfo.videoId) {
-                    // For title display in the title element, fetch video title in background
-                    fetchVideoTitle(videoInfo.videoId).then(title => {
-                        if (!item.hasCustomTitle && title) {
-                            // Create a video title element if it doesn't already exist
-                            if (!document.querySelector(`.video-title[data-video-id="${videoInfo.videoId}"]`)) {
-                                const titleElement = document.createElement('div');
-                                titleElement.className = 'video-title';
-                                titleElement.textContent = title;
-                                titleElement.dataset.videoId = videoInfo.videoId;
-                                
-                                // If the card is still in the DOM, add the title before it
-                                if (document.contains(card) && card.parentNode) {
-                                    card.parentNode.insertBefore(titleElement, card);
-                                }
-                            }
-                        }
-                    }).catch(e => {
-                        console.warn('Error fetching video title:', e);
-                    });
-                }
             }
             
             // Then create the link card (without the title in the card itself)
@@ -828,7 +805,13 @@ function initializeFeedbackSystem() {
 }
 
 // Initialize when the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', initApplication);
+document.addEventListener('DOMContentLoaded', async function() {
+    // Initialize the application first
+    initApplication();
+    
+    // Parse URL parameters if present (must come before editor initialization)
+    await handleUrlParams();
+});
 
 // Update the page load event handler to use a more robust approach
 window.addEventListener('load', async function() {
@@ -850,9 +833,6 @@ window.addEventListener('load', async function() {
             }
         }, 500);
     }
-    
-    // Parse URL parameters if present - this doesn't depend on editor
-    await handleUrlParams();
     
     // Initialize responsive toolbar
     initResponsiveToolbar();

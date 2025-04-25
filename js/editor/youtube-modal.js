@@ -6,6 +6,7 @@
 import { isYouTubeUrl, extractYouTubeInfo } from '../services/youtube-service.js';
 import { fetchVideoTitle, getVideoDuration } from '../services/video-info.js';
 import { timeToSeconds } from '../utils/time-utils.js';
+import { decodeHTMLEntities } from '../utils/html-utils.js';
 
 /**
  * Initialize and set up the YouTube link modal functionality

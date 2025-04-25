@@ -201,6 +201,7 @@ h1 .title-text {
 
 .ql-container.ql-snow {
     border: none;
+    border-radius: 0 0 8px 8px; /* Match the editor container's border radius at the bottom */
 }
 
 .ql-editor {
@@ -1382,9 +1383,9 @@ iframe {
     display: block !important; /* Override inline style */
     height: auto;
     min-height: 150px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin-bottom: 10px;
+    border: none; /* Remove the border that causes the square box */
+    border-radius: 0;
+    margin-bottom: 0;
 }
 
 /* Dark mode compatibility for editor */
