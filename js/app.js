@@ -491,7 +491,22 @@ function loadVideo(url) {
     
     // Check if it's a YouTube URL
     if (isYouTubeUrl(url)) {
-        return loadYouTubeVideo(url, viewer);
+        const result = loadYouTubeVideo(url, viewer);
+        
+        // Update the global viewer reference to the new iframe
+        // This ensures subsequent clicks work properly
+        if (result) {
+            const viewerId = viewer.id || 'viewer';
+            const newViewer = document.getElementById(viewerId);
+            if (newViewer) {
+                viewer = newViewer;
+                console.log('Updated viewer reference to new iframe element');
+            } else {
+                console.warn('Could not find new iframe element with ID:', viewerId);
+            }
+        }
+        
+        return result;
     } else {
         // For non-YouTube URLs, load directly
         try {
