@@ -500,7 +500,10 @@ function loadVideo(url) {
     }
 }
 
-// Initialize rich text editor
+/**
+ * Initialize rich text editor with robust error handling
+ * @returns {boolean} Whether initialization was successful
+ */
 function initRichTextEditor() {
     console.log('Initializing rich text editor...');
     
@@ -512,6 +515,61 @@ function initRichTextEditor() {
             urlInput.style.display = 'block';
         }
         
+        return false;
+    }
+    
+    // Check if Quill is loaded
+    if (typeof Quill === 'undefined') {
+        console.error('Quill library not loaded');
+        
+        // Show loading message
+        const loadingMsg = document.createElement('div');
+        loadingMsg.className = 'editor-loading-message';
+        loadingMsg.textContent = 'Loading editor...';
+        
+        // Insert before textarea
+        if (urlInput.parentNode) {
+            urlInput.parentNode.insertBefore(loadingMsg, urlInput);
+        }
+        
+        // Try to load Quill dynamically
+        const script = document.createElement('script');
+        script.src = 'https://cdn.quilljs.com/1.3.6/quill.min.js';
+        script.onload = () => {
+            console.log('Quill loaded successfully from CDN');
+            
+            // Also load CSS if needed
+            if (!document.querySelector('link[href*="quill.snow.css"]')) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://cdn.quilljs.com/1.3.6/quill.snow.css';
+                document.head.appendChild(link);
+            }
+            
+            // Remove loading message
+            if (loadingMsg.parentNode) {
+                loadingMsg.parentNode.removeChild(loadingMsg);
+            }
+            
+            // Initialize after a short delay to ensure DOM is ready
+            setTimeout(() => {
+                initRichTextEditor();
+            }, 200);
+        };
+        
+        script.onerror = () => {
+            console.error('Failed to load Quill from CDN');
+            // Show error message
+            loadingMsg.textContent = 'Failed to load editor. Using plain text mode.';
+            loadingMsg.className = 'editor-error-message';
+            
+            // Show textarea
+            urlInput.style.display = 'block';
+        };
+        
+        document.head.appendChild(script);
+        
+        // Return false as initialization failed (but will be attempted again)
         return false;
     }
     
@@ -535,6 +593,21 @@ function initRichTextEditor() {
             console.error('Failed to initialize rich editor, falling back to textarea');
             // Show textarea as fallback
             urlInput.style.display = 'block';
+            
+            // Add retry button
+            const retryBtn = document.createElement('button');
+            retryBtn.textContent = 'Retry Editor Loading';
+            retryBtn.className = 'retry-editor-button';
+            retryBtn.addEventListener('click', () => {
+                retryBtn.parentNode.removeChild(retryBtn);
+                initRichTextEditor();
+            });
+            
+            // Add before textarea
+            if (urlInput.parentNode) {
+                urlInput.parentNode.insertBefore(retryBtn, urlInput);
+            }
+            
             return false;
         }
         
@@ -646,6 +719,51 @@ let themeManager;
 let feedbackSystem;
 let responsiveUI;
 
+// Add a utility function to check if Quill is properly loaded
+function checkQuillStatus() {
+    // Check if Quill is loaded
+    const quillLoaded = typeof Quill !== 'undefined';
+    
+    // Check if our richEditorInstance exists and has Quill
+    const instanceExists = !!richEditorInstance;
+    const quillInstanceExists = instanceExists && !!richEditorInstance.getQuill();
+    
+    console.log('Quill Status:', {
+        quillLoaded,
+        instanceExists,
+        quillInstanceExists
+    });
+    
+    // Return detailed status
+    return {
+        quillLoaded,
+        instanceExists,
+        quillInstanceExists,
+        canReinitialize: quillLoaded && instanceExists
+    };
+}
+
+// Add a utility function to reset the editor in case of problems
+function resetRichEditor() {
+    // First check status
+    const status = checkQuillStatus();
+    
+    if (!status.quillLoaded) {
+        console.error('Cannot reset editor: Quill library not loaded');
+        return false;
+    }
+    
+    // If instance exists, try to reinitialize
+    if (status.instanceExists && richEditorInstance.tryReinitialize) {
+        console.log('Attempting to reinitialize existing editor instance');
+        return richEditorInstance.tryReinitialize();
+    }
+    
+    // Otherwise do a full initialization
+    console.log('Creating new editor instance');
+    return initRichTextEditor();
+}
+
 // Main initialization function
 function initApplication() {
     console.log('Initializing application...');
@@ -712,18 +830,32 @@ function initializeFeedbackSystem() {
 // Initialize when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initApplication);
 
-// Execute on page load for components that need the full page to be loaded
+// Update the page load event handler to use a more robust approach
 window.addEventListener('load', async function() {
-    // Initialize the rich text editor
-    initRichTextEditor();
+    // Initialize the rich text editor with retry logic
+    let editorInitialized = initRichTextEditor();
     
-    // Parse URL parameters if present
+    // If initial attempt fails, try again after a delay
+    if (!editorInitialized) {
+        console.log('First editor initialization failed, will retry in 500ms');
+        setTimeout(() => {
+            editorInitialized = initRichTextEditor();
+            
+            // If second attempt fails, try one more time
+            if (!editorInitialized) {
+                console.log('Second editor initialization failed, will retry in 1000ms');
+                setTimeout(() => {
+                    initRichTextEditor();
+                }, 1000);
+            }
+        }, 500);
+    }
+    
+    // Parse URL parameters if present - this doesn't depend on editor
     await handleUrlParams();
     
     // Initialize responsive toolbar
     initResponsiveToolbar();
-    
-    // Responsive UI is already handled by panel resizer's onResize callback
     
     console.log('Page load initialization complete');
 });

@@ -1293,3 +1293,122 @@ iframe {
     background-color: var(--text-secondary);
     opacity: 0.4;
 }
+
+/* Editor loading states */
+.editor-loading-message {
+    background-color: #e7f3ff;
+    border: 1px solid #b8daff;
+    color: #004085;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    text-align: center;
+    animation: pulse 1.5s infinite;
+}
+
+.editor-error-message {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.retry-editor-button {
+    display: block;
+    margin: 10px auto;
+    padding: 8px 16px;
+    background-color: #4a5568;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.retry-editor-button:hover {
+    background-color: #2d3748;
+}
+
+/* Dark mode for editor loading states */
+[data-theme="dark"] .editor-loading-message {
+    background-color: #1a365d;
+    border-color: #2a4365;
+    color: #bee3f8;
+}
+
+[data-theme="dark"] .editor-error-message {
+    background-color: #4a2530;
+    border-color: #63171b;
+    color: #fbb6ce;
+}
+
+[data-theme="dark"] .retry-editor-button {
+    background-color: #2d3748;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .retry-editor-button:hover {
+    background-color: #4a5568;
+}
+
+/* Animation for loading message */
+@keyframes pulse {
+    0% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.6;
+    }
+}
+
+/* Ensure editor is properly displayed */
+.ql-container {
+    min-height: 120px;
+}
+
+/* Fix for Quill editor visibility issues */
+#rich-editor {
+    display: block !important; /* Override inline style */
+    height: auto;
+    min-height: 150px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+/* Dark mode compatibility for editor */
+html[data-theme="dark"] .ql-toolbar {
+    background-color: #2d3748;
+    border-color: #4a5568;
+}
+
+html[data-theme="dark"] .ql-container {
+    background-color: #1a202c;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] .ql-picker-label,
+html[data-theme="dark"] .ql-picker-options {
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] .ql-toolbar button {
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] .ql-toolbar button svg {
+    fill: #e2e8f0;
+    stroke: #e2e8f0;
+}
+
+/* Ensure editor is visible when loaded */
+.ql-editor {
+    min-height: 150px;
+}
