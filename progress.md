@@ -12,9 +12,11 @@
   - js/utils/
   - js/data/
 - Created all required empty JS files with basic comments
+- Updated index.html to point to js/app.js instead of app.js
 
 ## What to Test
-Nothing to test at this stage - the file structure has been created but no functional code has been migrated yet.
+- Verify the directory structure is correctly set up
+- Confirm that index.html now references js/app.js instead of app.js
 
 ## Next Step
-Step 1: Implement app.js with DOM elements initialization, event listener setup, module orchestration, and page load initialization.
+Step 1: Implement app.js with DOM elements initialization, event listener setup, and page load initialization.
