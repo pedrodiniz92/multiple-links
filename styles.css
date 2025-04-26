@@ -825,6 +825,38 @@ iframe {
     opacity: 1;
 }
 
+/* YouTube button text styles */
+.youtube-button {
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 8px !important;
+    width: auto !important;
+}
+
+.youtube-text {
+    margin-left: 6px;
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #282828;
+    text-transform: none;
+    letter-spacing: -0.02em;
+    font-family: 'Roboto', Arial, sans-serif;
+}
+
+#add-youtube-link:hover .youtube-text {
+    color: var(--accent-primary);
+}
+
+[data-theme="dark"] #add-youtube-link .youtube-text {
+    color: #ffffff;
+    opacity: 0.95;
+}
+
+[data-theme="dark"] #add-youtube-link:hover .youtube-text {
+    color: var(--accent-primary) !important;
+    opacity: 1;
+}
+
 /* Override inversion for theme icons to ensure visibility */
 [data-theme="dark"] .theme-icon-dark {
     filter: invert(1) !important;

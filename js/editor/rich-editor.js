@@ -239,7 +239,7 @@ function initRichEditor(options) {
                 modules: {
                     toolbar: '#editor-toolbar'
                 },
-                placeholder: 'Enter YouTube links or text.\n\nClick the YouTube button above for more options.'
+                placeholder: 'Enter text here.\n\nTo add YouTube links, click the YouTube button above.'
             });
             
             // Sync Quill content to the hidden textarea
