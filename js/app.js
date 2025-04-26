@@ -815,27 +815,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 // Update the page load event handler to use a more robust approach
 window.addEventListener('load', async function() {
-    // Initialize the rich text editor with retry logic
-    let editorInitialized = initRichTextEditor();
-    
-    // If initial attempt fails, try again after a delay
-    if (!editorInitialized) {
-        console.log('First editor initialization failed, will retry in 500ms');
-        setTimeout(() => {
-            editorInitialized = initRichTextEditor();
-            
-            // If second attempt fails, try one more time
-            if (!editorInitialized) {
-                console.log('Second editor initialization failed, will retry in 1000ms');
-                setTimeout(() => {
-                    initRichTextEditor();
-                }, 1000);
-            }
-        }, 500);
+    if (typeof Quill !== 'undefined') {
+        // Quill is loaded, proceed with initialization
+        initRichTextEditor();
+    } else {
+        // This case should be rare after moving the script tag, but handle it
+        console.error("Quill library not available even after window.load.");
+        // Show fallback textarea immediately
+        const urlInput = document.getElementById('url-input');
+        const richEditor = document.getElementById('rich-editor');
+        if (urlInput) urlInput.style.display = 'block';
+        if (richEditor) richEditor.style.display = 'none';
+        // Optionally, display a persistent error message to the user
     }
-    
-    // Initialize responsive toolbar
+
+    // Initialize other components like the toolbar
     initResponsiveToolbar();
-    
+
     console.log('Page load initialization complete');
 });
