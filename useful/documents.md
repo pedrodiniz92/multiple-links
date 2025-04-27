@@ -1,16 +1,13 @@
-# Running the server
-python -m http.server 8000
+## Document controls
 
-# Resetting to latest commit
-git reset --hard HEAD && git clean -fdx
+# Download everything
+zip -r project_archive.zip . -x ".git/*" -x "node_modules/*"
 
-I want everything in my local machine to be exactly like the latest commit. Also, delete all untracked files. Then do nothing else.
-
-# References
-Next steps and notes - https://docs.google.com/document/d/1UA8CedW5Qqt_5u0W1OmUFJbgDPIfkMR_ZESPZVBEbvM/edit?tab=t.0
-
+## Generate Filetree
+Generate the filetree for my entire project using box drawing characters (├──, │, └──) and add it to the end of /useful-md/useful.md
 
 # Filetree
+
 ```
 /workspaces/multiple-links/
 ├── .env
