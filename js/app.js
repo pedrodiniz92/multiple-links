@@ -40,6 +40,8 @@ import initResponsiveUI from './ui/responsive-ui.js';
 import initRichEditor from './editor/rich-editor.js';
 import initYouTubeModal from './editor/youtube-modal.js';
 import { formatTime } from './utils/time-utils.js';
+import initAuthUI from './auth/auth-ui.js';
+import { getCurrentUser, isSessionValid } from './services/auth-service.js';
 
 // DOM elements
 let resizer, leftPanel, rightPanel, goButton, linksContainer, viewer;
@@ -50,9 +52,13 @@ let richEditor, editorContainer, addYouTubeBtn;
 let youtubeModal, modalFeedback, youtubeUrlInput, youtubeTitleInput, youtubeContextInput;
 let startTimeInput, endTimeInput, fetchTitleBtn, insertLinkBtn, cancelBtn, lineBreakBtn;
 
+// Auth modal elements
+let signinModal, signupModal, signinModalFeedback, signupModalFeedback, authLinksContainer;
+
 // Module instances
 let richEditorInstance;
 let youtubeModalInstance;
+let authUIInstance;
 
 // Initialize DOM elements
 function initDOMElements() {
@@ -90,6 +96,13 @@ function initDOMElements() {
     insertLinkBtn = document.getElementById('insert-youtube-link-btn');
     cancelBtn = document.getElementById('cancel-youtube-link-btn');
     lineBreakBtn = document.getElementById('add-linebreak-btn');
+    
+    // Auth elements
+    signinModal = document.getElementById('signin-modal');
+    signupModal = document.getElementById('signup-modal');
+    signinModalFeedback = document.getElementById('signin-modal-feedback');
+    signupModalFeedback = document.getElementById('signup-modal-feedback');
+    authLinksContainer = document.getElementById('auth-links-container');
 }
 
 // Toggle visibility of the input section
@@ -665,6 +678,54 @@ function initYouTubeModalDialog() {
     }
 }
 
+// Initialize authentication UI
+function initializeAuthUI() {
+    console.log('Initializing authentication UI...');
+    
+    if (!authLinksContainer || !signinModal || !signupModal) {
+        console.error('Required DOM elements for auth UI not found');
+        return false;
+    }
+    
+    // Initialize the auth UI module
+    authUIInstance = initAuthUI({
+        authLinksContainer,
+        signInModal: signinModal,
+        signUpModal: signupModal,
+        signInLink: document.getElementById('signin-link'),
+        signUpLink: document.getElementById('signup-link'),
+        signInModalFeedback: signinModalFeedback,
+        signUpModalFeedback: signupModalFeedback,
+        showFeedbackMessage: (element, isModal = false) => {
+            // Use the feedback system if available, or create a simple animation otherwise
+            if (feedbackSystem && typeof feedbackSystem.showFeedbackMessage === 'function') {
+                feedbackSystem.showFeedbackMessage(element, isModal);
+            } else {
+                // Fallback animation
+                element.style.display = 'block';
+                element.style.opacity = '1';
+                
+                setTimeout(() => {
+                    element.style.opacity = '0';
+                    setTimeout(() => {
+                        element.style.display = 'none';
+                    }, 500);
+                }, 2000);
+            }
+        }
+    });
+    
+    if (authUIInstance) {
+        // Initialize auth UI
+        authUIInstance.init();
+        console.log('Auth UI initialized successfully');
+        return true;
+    } else {
+        console.error('Auth UI initialization failed');
+        return false;
+    }
+}
+
 // Parse URL parameters from the query string
 async function handleUrlParams() {
     console.log('Parsing URL parameters...');
@@ -753,6 +814,9 @@ function initApplication() {
     
     // Initialize feedback system
     initializeFeedbackSystem();
+    
+    // Initialize auth UI
+    initializeAuthUI();
     
     // Initialize responsive UI components
     initResponsiveToolbar();

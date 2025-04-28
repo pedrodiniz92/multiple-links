@@ -24,9 +24,9 @@
                 </h2>
             </div>
             <!-- Auth links -->
-            <div class="auth-links">
-                <a href="test/signin.html">Sign in</a>
-                <a href="test/signup.html">Sign up</a>
+            <div class="auth-links" id="auth-links-container">
+                <a href="#" id="signin-link">Sign in</a>
+                <a href="#" id="signup-link">Sign up</a>
             </div>
         </div>
         <div class="toolbar-container">
@@ -168,6 +168,126 @@
                 <div class="modal-actions">
                     <button id="insert-youtube-link-btn" class="primary-button">Insert</button>
                     <button id="cancel-youtube-link-btn" class="cancel-button">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sign In Modal -->
+    <div id="signin-modal" class="modal">
+        <div class="modal-content">
+            <div id="signin-modal-feedback">Sign in successful!</div>
+            <div class="modal-header">
+                <h3>Sign In</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="signin-username-email">Username or Email:</label>
+                    <input type="text" id="signin-username-email" />
+                </div>
+                <div class="form-group">
+                    <label for="signin-password">Password:</label>
+                    <input type="password" id="signin-password" />
+                </div>
+                <div class="signin-form-options">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="signin-remember-me" />
+                        <label for="signin-remember-me">Remember me</label>
+                    </div>
+                    
+                    <div class="forgot-password-container">
+                        <a href="#" id="forgot-password-link">Forgot your password?</a>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button id="signin-btn" class="primary-button">Sign In</button>
+                    <button id="signin-cancel-btn" class="cancel-button">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sign Up Modal -->
+    <div id="signup-modal" class="modal">
+        <div class="modal-content">
+            <div id="signup-modal-feedback">Account created successfully!</div>
+            <div class="modal-header">
+                <h3>Sign Up</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="signup-username">Username:</label>
+                    <input type="text" id="signup-username" />
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email:</label>
+                    <input type="email" id="signup-email" />
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password:</label>
+                    <input type="password" id="signup-password" />
+                </div>
+                <div class="form-group">
+                    <label for="signup-confirm-password">Confirm Password:</label>
+                    <input type="password" id="signup-confirm-password" />
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="signup-terms" />
+                    <label for="signup-terms">I agree to the Terms and Conditions</label>
+                </div>
+                
+                <div class="modal-actions">
+                    <button id="signup-btn" class="primary-button">Sign Up</button>
+                    <button id="signup-cancel-btn" class="cancel-button">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reset Password Modal -->
+    <div id="reset-password-modal" class="modal">
+        <div class="modal-content">
+            <div id="reset-password-modal-feedback">Instructions sent successfully!</div>
+            
+            <div class="modal-header">
+                <h3>Reset Password</h3>
+            </div>
+            
+            <!-- Request Step -->
+            <div id="reset-request-step" class="modal-body">
+                <div class="form-group">
+                    <label for="reset-email">Your Email:</label>
+                    <input type="email" id="reset-email" placeholder="Enter your email address" />
+                    <p class="format-note">We'll send instructions to reset your password</p>
+                </div>
+                
+                <div class="modal-actions">
+                    <button id="request-reset-btn" class="primary-button">Request Reset</button>
+                    <button id="reset-cancel-btn" class="cancel-button">Cancel</button>
+                </div>
+            </div>
+            
+            <!-- Reset Step -->
+            <div id="reset-password-step" class="modal-body" style="display: none;">
+                <div class="form-group">
+                    <label for="reset-token">Reset Token:</label>
+                    <input type="text" id="reset-token" placeholder="Enter the token from the email" />
+                    <p class="format-note">For demo purposes, the token is shown directly</p>
+                </div>
+                <div class="form-group">
+                    <label for="reset-new-password">New Password:</label>
+                    <input type="password" id="reset-new-password" />
+                    <p class="format-note">Must be at least 6 characters</p>
+                </div>
+                <div class="form-group">
+                    <label for="reset-confirm-password">Confirm Password:</label>
+                    <input type="password" id="reset-confirm-password" />
+                </div>
+                
+                <div class="modal-actions">
+                    <button id="reset-password-btn" class="primary-button">Reset Password</button>
+                    <button id="back-to-request-btn" class="secondary-button">Back</button>
                 </div>
             </div>
         </div>

@@ -426,7 +426,10 @@ button {
 }
 
 /* Dark mode for modal feedback */
-[data-theme="dark"] #modal-title-feedback {
+[data-theme="dark"] #modal-title-feedback,
+[data-theme="dark"] #signin-modal-feedback,
+[data-theme="dark"] #signup-modal-feedback,
+[data-theme="dark"] #reset-password-modal-feedback {
     background-color: rgba(209, 250, 229, 0.98);
     color: #065f46;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
@@ -1006,7 +1009,10 @@ iframe {
 }
 
 /* Modal feedback message */
-#modal-title-feedback {
+#modal-title-feedback, 
+#signin-modal-feedback, 
+#signup-modal-feedback,
+#reset-password-modal-feedback {
     position: absolute;
     top: -50px;
     left: 50%;
@@ -1153,6 +1159,87 @@ iframe {
     opacity: 0.8;
 }
 
+/* Checkbox styles for auth forms */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.checkbox-group label {
+    margin: 0;
+    cursor: pointer;
+    font-weight: normal;
+    font-size: 15px;
+}
+
+/* User info styles for authenticated state */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-info .username {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.logout-button {
+    background-color: transparent;
+    border: none;
+    color: var(--accent-primary);
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: all 0.2s;
+    margin-left: 5px;
+}
+
+.logout-button:hover {
+    background-color: var(--button-hover-bg);
+    color: var(--accent-primary);
+}
+
+/* Auth form flex layout for remember me and forgot password */
+.signin-form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.checkbox-group {
+    margin-bottom: 0;
+}
+
+.forgot-password-container {
+    margin: 0;
+}
+
+.forgot-password-container a {
+    color: var(--accent-primary);
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.forgot-password-container a:hover {
+    text-decoration: underline;
+    opacity: 0.9;
+}
+
 @media (max-width: 600px) {
     .time-inputs {
         flex-direction: column;
@@ -1171,6 +1258,16 @@ iframe {
     
     .toolbar-separator {
         height: 20px;
+    }
+    
+    .signin-form-options {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .forgot-password-container {
+        align-self: flex-end;
     }
 }
 
