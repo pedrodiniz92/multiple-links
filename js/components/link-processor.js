@@ -24,14 +24,29 @@ function processSpoilerTags(text) {
 function toggleSpoiler(event) {
     const spoilerElement = event.currentTarget;
     
+    // Find the parent card element
+    const parentCard = spoilerElement.closest('.text-card');
+    
     if (spoilerElement.classList.contains('revealed')) {
         // Hide spoiler text again
         spoilerElement.classList.remove('revealed');
         spoilerElement.textContent = 'show answer';
+        
+        // Update card text alignment for hidden spoiler
+        if (parentCard) {
+            parentCard.classList.remove('has-revealed-spoiler');
+            parentCard.classList.add('has-spoiler');
+        }
     } else {
         // Reveal spoiler text
         spoilerElement.classList.add('revealed');
         spoilerElement.textContent = spoilerElement.dataset.spoilerText;
+        
+        // Update card text alignment for revealed spoiler
+        if (parentCard) {
+            parentCard.classList.remove('has-spoiler');
+            parentCard.classList.add('has-revealed-spoiler');
+        }
     }
 }
 

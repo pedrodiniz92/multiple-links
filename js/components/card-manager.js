@@ -46,6 +46,9 @@ function createTextCard(text, options = {}) {
             const processedHtml = processSpoilerTags(text);
             card.innerHTML = processedHtml;
             
+            // Mark this card as having spoilers with left alignment initially
+            card.classList.add('has-spoiler');
+            
             // Add click handlers for spoiler elements
             setTimeout(() => {
                 const spoilers = card.querySelectorAll('.spoiler');

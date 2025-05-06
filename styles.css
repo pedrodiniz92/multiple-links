@@ -531,9 +531,22 @@ button {
 }
 
 .text-card {
-    line-height: 1.5;
+    line-height: 1.6;
     font-weight: normal;
     cursor: default;
+    text-align: justify; /* Default justified text */
+    hyphens: auto;
+    letter-spacing: 0.01em;
+    word-spacing: 0.02em;
+}
+
+/* Special classes for spoiler-containing cards */
+.text-card.has-spoiler {
+    text-align: left; /* When card has a hidden spoiler */
+}
+
+.text-card.has-revealed-spoiler {
+    text-align: justify; /* When spoiler is revealed */
 }
 
 /* Rich text formatting styles for text cards */
@@ -555,7 +568,7 @@ button {
 
 /* Keep card spacing consistent whether there are multiple paragraphs or not */
 .text-card p {
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.7rem 0;
 }
 
 .text-card p:last-child {
@@ -572,6 +585,7 @@ button {
     cursor: default;
     margin-top: 1rem;
     margin-bottom: 0.5rem;
+    text-align: left;
 }
 
 .link-card:hover {
@@ -637,6 +651,7 @@ button {
     color: var(--text-secondary);
     margin-bottom: 0.2rem;
     padding-left: 0; /* Ensure perfect alignment with timestamps */
+    text-align: left;
 }
 
 .link-card.active {
@@ -681,6 +696,7 @@ button {
     line-height: 1.4;
     cursor: pointer;
     transition: all 0.2s;
+    text-align: left;
     /* Position relative already declared above */
 }
 
@@ -1612,6 +1628,7 @@ html[data-theme="dark"] .ql-toolbar button svg {
     margin: 4px 2px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     border: 1px solid #e0e0e0;
+    white-space: nowrap;
 }
 
 .spoiler:hover {
@@ -1620,9 +1637,15 @@ html[data-theme="dark"] .ql-toolbar button svg {
 }
 
 .spoiler.revealed {
-    background-color: #f1f1f1;
+    background-color: #f5f5f5;
     color: #333;
     font-style: normal;
+    display: inline;
+    text-align: left;
+    white-space: normal;
+    letter-spacing: 0.01em;
+    padding: 3px 8px;
+    border-radius: 4px;
 }
 
 /* Dark mode spoiler styling */
@@ -1638,8 +1661,14 @@ html[data-theme="dark"] .ql-toolbar button svg {
 }
 
 [data-theme="dark"] .spoiler.revealed {
-    background-color: #333;
+    background-color: #2a2a2a;
     color: #ddd;
+    display: inline;
+    text-align: left;
+    white-space: normal;
+    letter-spacing: 0.01em;
+    padding: 3px 8px;
+    border-radius: 4px;
 }
 
 /* Dark mode section card separators */
