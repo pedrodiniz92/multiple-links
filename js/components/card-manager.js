@@ -3,6 +3,9 @@
  * Handles creating, managing, and ordering cards in the application
  */
 
+// Import processSpoilerTags and toggleSpoiler functions
+import { processSpoilerTags, toggleSpoiler } from './link-processor.js';
+
 // Global counter for card numbers
 let cardCounter = 1;
 
@@ -34,9 +37,21 @@ function createTextCard(text) {
         // Create a regular text card with rich text support
         card.className = 'text-card';
         
-        // If the text contains HTML formatting
-        if (text.includes('<') && text.includes('>')) {
-            // Use innerHTML to preserve formatting
+        // Check if text contains spoiler tags
+        if (text.includes('//')) {
+            // Process text with spoiler tags
+            const processedHtml = processSpoilerTags(text);
+            card.innerHTML = processedHtml;
+            
+            // Add click handlers for spoiler elements
+            setTimeout(() => {
+                const spoilers = card.querySelectorAll('.spoiler');
+                spoilers.forEach(spoiler => {
+                    spoiler.addEventListener('click', toggleSpoiler);
+                });
+            }, 0);
+        } else if (text.includes('<') && text.includes('>')) {
+            // Use innerHTML to preserve formatting for other HTML
             card.innerHTML = text;
         } else {
             // Plain text

@@ -1547,3 +1547,48 @@ html[data-theme="dark"] .ql-toolbar button svg {
 .ql-editor {
     min-height: 150px;
 }
+
+/* Spoiler tag styling */
+.spoiler {
+    display: inline-block;
+    background-color: #f1f1f1;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #666;
+    font-style: normal;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+    user-select: none;
+    margin: 4px 2px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e0e0e0;
+}
+
+.spoiler:hover {
+    background-color: #e8e8e8;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.spoiler.revealed {
+    background-color: #f1f1f1;
+    color: #333;
+    font-style: normal;
+}
+
+/* Dark mode spoiler styling */
+[data-theme="dark"] .spoiler {
+    background-color: #333;
+    color: #aaa;
+    border-color: #444;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+[data-theme="dark"] .spoiler:hover {
+    background-color: #3a3a3a;
+}
+
+[data-theme="dark"] .spoiler.revealed {
+    background-color: #333;
+    color: #ddd;
+}

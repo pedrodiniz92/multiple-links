@@ -39,6 +39,7 @@ import initFeedback from './ui/feedback.js';
 import initResponsiveUI from './ui/responsive-ui.js';
 import initRichEditor from './editor/rich-editor.js';
 import initYouTubeModal from './editor/youtube-modal.js';
+import initSpoilerModal from './editor/spoiler-modal.js';
 import { formatTime } from './utils/time-utils.js';
 import initAuthUI from './auth/auth-ui.js';
 import { getCurrentUser, isSessionValid } from './services/auth-service.js';
@@ -52,12 +53,16 @@ let richEditor, editorContainer, addYouTubeBtn;
 let youtubeModal, modalFeedback, youtubeUrlInput, youtubeTitleInput, youtubeContextInput;
 let startTimeInput, endTimeInput, fetchTitleBtn, insertLinkBtn, cancelBtn, lineBreakBtn;
 
+// Spoiler modal elements
+let spoilerModal, spoilerModalFeedback, spoilerTextInput, insertSpoilerBtn, cancelSpoilerBtn, addSpoilerBtn;
+
 // Auth modal elements
 let signinModal, signupModal, signinModalFeedback, signupModalFeedback, authLinksContainer;
 
 // Module instances
 let richEditorInstance;
 let youtubeModalInstance;
+let spoilerModalInstance;
 let authUIInstance;
 
 // Initialize DOM elements
@@ -83,6 +88,7 @@ function initDOMElements() {
     richEditor = document.getElementById('rich-editor');
     editorContainer = document.getElementById('editor-container');
     addYouTubeBtn = document.getElementById('add-youtube-link');
+    addSpoilerBtn = document.getElementById('add-spoiler');
     
     // YouTube modal elements
     youtubeModal = document.getElementById('add-youtube-modal');
@@ -96,6 +102,13 @@ function initDOMElements() {
     insertLinkBtn = document.getElementById('insert-youtube-link-btn');
     cancelBtn = document.getElementById('cancel-youtube-link-btn');
     lineBreakBtn = document.getElementById('add-linebreak-btn');
+    
+    // Spoiler modal elements
+    spoilerModal = document.getElementById('spoiler-modal');
+    spoilerModalFeedback = document.getElementById('spoiler-modal-feedback');
+    spoilerTextInput = document.getElementById('spoiler-text');
+    insertSpoilerBtn = document.getElementById('insert-spoiler-btn');
+    cancelSpoilerBtn = document.getElementById('cancel-spoiler-btn');
     
     // Auth elements
     signinModal = document.getElementById('signin-modal');
@@ -604,6 +617,9 @@ function initRichTextEditor() {
         // Initialize YouTube modal after editor is ready
         initYouTubeModalDialog();
         
+        // Initialize Spoiler modal after editor is ready
+        initSpoilerModalDialog();
+        
         return true;
     } else {
         console.error('Rich editor instance could not be created');
@@ -674,6 +690,83 @@ function initYouTubeModalDialog() {
         return true;
     } else {
         console.error('YouTube modal initialization failed');
+        return false;
+    }
+}
+
+// Initialize Spoiler modal
+function initSpoilerModalDialog() {
+    console.log('Initializing Spoiler modal dialog...');
+    
+    if (!spoilerModal || !spoilerModalFeedback || !spoilerTextInput || !richEditorInstance) {
+        console.error('Required DOM elements for Spoiler modal not found or rich editor not initialized');
+        return false;
+    }
+    
+    // Initialize the Spoiler modal module
+    spoilerModalInstance = initSpoilerModal({
+        modalElement: spoilerModal,
+        modalFeedback: spoilerModalFeedback,
+        spoilerTextInput,
+        insertSpoilerBtn,
+        cancelBtn: cancelSpoilerBtn,
+        richEditorInstance,
+        showFeedbackMessage: (element, isModal = false) => {
+            // Use the feedback system if available, or create a simple animation otherwise
+            if (feedbackSystem && typeof feedbackSystem.showFeedbackMessage === 'function') {
+                feedbackSystem.showFeedbackMessage(element, isModal);
+            } else {
+                // Fallback animation
+                element.style.display = 'block';
+                element.style.opacity = '1';
+                
+                setTimeout(() => {
+                    element.style.opacity = '0';
+                    setTimeout(() => {
+                        element.style.display = 'none';
+                    }, 500);
+                }, 2000);
+            }
+        }
+    });
+    
+    // Wire up the Spoiler button to handle clicks
+    if (addSpoilerBtn && spoilerModalInstance) {
+        // Remove any existing listeners to avoid duplicates
+        const newSpoilerBtn = addSpoilerBtn.cloneNode(true);
+        if (addSpoilerBtn.parentNode) {
+            addSpoilerBtn.parentNode.replaceChild(newSpoilerBtn, addSpoilerBtn);
+            // Update the reference
+            addSpoilerBtn = newSpoilerBtn;
+        }
+        
+        // Add click event to handle selected text or show the modal
+        addSpoilerBtn.addEventListener('click', () => {
+            // Get the Quill instance
+            const quill = richEditorInstance.getQuill();
+            
+            if (quill) {
+                // Get the current selection
+                const selection = quill.getSelection();
+                
+                if (selection && selection.length > 0) {
+                    // If text is selected, wrap it with spoiler tags
+                    const selectedText = quill.getText(selection.index, selection.length);
+                    spoilerModalInstance.wrapSelectionInSpoilerTags(selectedText);
+                } else {
+                    // If no text is selected, show the spoiler modal
+                    spoilerModalInstance.showModal();
+                }
+            } else {
+                // Fallback if Quill isn't available
+                spoilerModalInstance.showModal();
+            }
+        });
+        
+        console.log('Spoiler modal initialized successfully');
+        return true;
+    } else {
+        console.error('Spoiler modal initialization failed');
         return false;
     }
 }

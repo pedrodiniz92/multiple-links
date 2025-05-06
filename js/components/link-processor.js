@@ -1,10 +1,39 @@
 /**
  * Link Processor Module
- * Handles link parsing, title/context tags, and link validation
+ * Handles link parsing, title/context tags, spoiler tags and link validation
  */
 
 // Import the HTML utilities 
 import { fixHtmlEntitiesInUrls } from '../utils/html-utils.js';
+
+/**
+ * Process spoiler tags in text content
+ * @param {string} text - The text to process for spoiler tags
+ * @returns {string} - Text with spoiler tags converted to HTML elements
+ */
+function processSpoilerTags(text) {
+    // Replace spoiler tags with HTML elements
+    // Pattern: match text between // tags, but not greedy (non-greedy match with .*?)
+    return text.replace(/\/\/(.*?)\/\//g, '<span class="spoiler" data-spoiler-text="$1">show answer</span>');
+}
+
+/**
+ * Toggle a spoiler element between hidden and revealed states
+ * @param {Event} event - The click event
+ */
+function toggleSpoiler(event) {
+    const spoilerElement = event.currentTarget;
+    
+    if (spoilerElement.classList.contains('revealed')) {
+        // Hide spoiler text again
+        spoilerElement.classList.remove('revealed');
+        spoilerElement.textContent = 'show answer';
+    } else {
+        // Reveal spoiler text
+        spoilerElement.classList.add('revealed');
+        spoilerElement.textContent = spoilerElement.dataset.spoilerText;
+    }
+}
 
 /**
  * Check if a string is a valid URL
@@ -167,5 +196,7 @@ export {
     isValidUrl,
     parseLinkWithTitle,
     splitAndProcessInput,
-    processInputText
+    processInputText,
+    processSpoilerTags,
+    toggleSpoiler
 };
