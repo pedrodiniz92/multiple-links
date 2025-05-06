@@ -56,8 +56,17 @@ function normalizeUrl(url) {
  * @returns {string} - The shareable URL
  */
 function generateShareableUrl(content) {
-    const encodedContent = encodeURIComponent(content);
-    return `${window.location.origin}${window.location.pathname}?urls=${encodedContent}`;
+    console.log('Generating shareable URL for content:', content);
+    
+    // Make sure content is a string
+    const contentString = content.toString();
+    
+    // Encode the content, ensuring special characters like & in YouTube URLs are preserved
+    const encodedContent = encodeURIComponent(contentString);
+    console.log('Encoded content length:', encodedContent.length);
+    
+    const shareableUrl = `${window.location.origin}${window.location.pathname}?urls=${encodedContent}`;
+    return shareableUrl;
 }
 
 /**
@@ -68,12 +77,38 @@ async function parseUrlParams(callback) {
     const urlParams = new URLSearchParams(window.location.search);
     const urls = urlParams.get('urls');
     
+    console.log('Parsing URL parameters, found urls param:', !!urls);
+    
     if (urls && typeof callback === 'function') {
-        const decodedContent = decodeURIComponent(urls);
-        await callback(decodedContent);
+        try {
+            const decodedContent = decodeURIComponent(urls);
+            console.log('Decoded content from URL:', decodedContent);
+            await callback(decodedContent);
+        } catch (error) {
+            console.error('Error decoding URL content:', error);
+            // Try a more forgiving approach for malformed URLs
+            try {
+                // This is a fallback in case the standard decoding fails
+                let decodedContent = urls.replace(/\+/g, ' ');
+                console.log('Using fallback decoding for URL content');
+                await callback(decodedContent);
+            } catch (fallbackError) {
+                console.error('Fallback decoding also failed:', fallbackError);
+            }
+        }
     }
     
-    return urls ? decodeURIComponent(urls) : null;
+    if (urls) {
+        try {
+            return decodeURIComponent(urls);
+        } catch (error) {
+            console.error('Error in final decoding of URL content:', error);
+            // Return the raw URL as a last resort
+            return urls.replace(/\+/g, ' ');
+        }
+    }
+    
+    return null;
 }
 
 /**

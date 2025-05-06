@@ -380,12 +380,20 @@ function setupEventListeners() {
         shareIcon.addEventListener('click', () => {
             // Only generate a URL if we have content
             if (linksContainer && linksContainer.children.length > 0) {
+                console.log('Share icon clicked, getting links from cards...');
+                
                 // Get current links and text from cards
                 const contents = getCurrentLinksFromCards(linksContainer);
                 
                 if (contents.length > 0) {
+                    console.log('Content to share:', contents);
+                    
                     // Generate shareable URL from the current content
-                    const shareableUrl = generateShareableUrl(contents.join('\n'));
+                    const contentString = contents.join('\n');
+                    console.log('Content string to share:', contentString);
+                    
+                    const shareableUrl = generateShareableUrl(contentString);
+                    console.log('Generated shareable URL:', shareableUrl);
                     
                     // If we have the feedback system initialized, use it
                     if (feedbackSystem) {
@@ -421,6 +429,15 @@ function setupEventListeners() {
                             .catch(err => {
                                 console.error('Failed to copy to clipboard:', err);
                             });
+                    }
+                } else {
+                    console.warn('No content found to share');
+                    if (clipboardFeedback) {
+                        clipboardFeedback.textContent = 'No content to share';
+                        clipboardFeedback.style.opacity = 1;
+                        setTimeout(() => {
+                            clipboardFeedback.style.opacity = 0;
+                        }, 1700);
                     }
                 }
             }

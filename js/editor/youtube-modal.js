@@ -46,6 +46,9 @@ function initYouTubeModal(options) {
     // Track event handlers to avoid duplication
     let eventHandlersAttached = false;
     
+    // Store the editor selection when the modal opens
+    let savedSelection = null;
+    
     /**
      * Show the YouTube modal dialog
      */
@@ -56,6 +59,12 @@ function initYouTubeModal(options) {
         }
         
         console.log('Showing YouTube modal and setting up event handlers');
+        
+        // Save the current cursor position/selection
+        if (richEditorInstance && richEditorInstance.getQuill()) {
+            savedSelection = richEditorInstance.getQuill().getSelection();
+            console.log('Saved editor selection:', savedSelection);
+        }
         
         // Clear previous inputs
         youtubeUrlInput.value = '';
@@ -83,6 +92,11 @@ function initYouTubeModal(options) {
     function hideModal() {
         if (modalElement) {
             modalElement.style.display = 'none';
+            
+            // Clear the saved selection when closing without inserting
+            if (savedSelection) {
+                savedSelection = null;
+            }
         }
     }
     
@@ -293,7 +307,46 @@ function initYouTubeModal(options) {
         
         // Insert link into the rich editor
         if (richEditorInstance) {
-            richEditorInstance.insertContent(formattedLink);
+            // If we have a saved selection, restore it before inserting
+            if (savedSelection && richEditorInstance.getQuill()) {
+                const quill = richEditorInstance.getQuill();
+                
+                // Set the selection back to where it was when the modal opened
+                quill.setSelection(savedSelection);
+                
+                // Check if cursor is in a line that already has content
+                const cursorPosition = savedSelection.index;
+                const text = quill.getText();
+                
+                // Find the start of the current line
+                let lineStart = cursorPosition;
+                while (lineStart > 0 && text[lineStart - 1] !== '\n') {
+                    lineStart--;
+                }
+                
+                // Find the end of the current line
+                let lineEnd = cursorPosition;
+                while (lineEnd < text.length && text[lineEnd] !== '\n') {
+                    lineEnd++;
+                }
+                
+                // Check if there's any non-whitespace content on this line
+                const currentLine = text.substring(lineStart, lineEnd).trim();
+                
+                if (currentLine.length > 0) {
+                    // Line has content, add a line break before the link
+                    quill.insertText(cursorPosition, '\n' + formattedLink);
+                } else {
+                    // Line is empty, just insert the link
+                    quill.insertText(cursorPosition, formattedLink);
+                }
+                
+                // Clear the saved selection
+                savedSelection = null;
+            } else {
+                // Fall back to normal insertion if there's no saved selection
+                richEditorInstance.insertContent(formattedLink);
+            }
         } else {
             console.error('Rich editor not available for inserting link');
         }

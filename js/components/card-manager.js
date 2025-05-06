@@ -225,6 +225,10 @@ function getCurrentLinksFromCards(container) {
     
     // First pass to identify section boundaries and breaks
     allElements.forEach((element, index) => {
+        // For debugging - log element types to help diagnose sharing issues
+        console.log('Processing element:', element.className, 
+                    element.classList.contains('link-card') ? 'videoLink: ' + element.dataset.videoLink : '');
+        
         if (element.classList.contains('break-spacer')) {
             // Add break tag
             contents.push('---');
@@ -237,8 +241,15 @@ function getCurrentLinksFromCards(container) {
             }
             
             // Add the card content
-            if (element.classList.contains('link-card') && element.dataset.originalInput) {
-                contents.push(element.dataset.originalInput);
+            if (element.classList.contains('link-card')) {
+                // For link cards, prioritize originalInput if available,
+                // otherwise construct from videoLink
+                if (element.dataset.originalInput) {
+                    contents.push(element.dataset.originalInput);
+                } else if (element.dataset.videoLink) {
+                    // If we don't have originalInput but have videoLink, use that
+                    contents.push(element.dataset.videoLink);
+                }
             } else if ((element.classList.contains('text-card') || element.classList.contains('header-card')) && element.dataset.originalText) {
                 contents.push(element.dataset.originalText);
             }
@@ -248,10 +259,22 @@ function getCurrentLinksFromCards(container) {
                 contents.push('/++');
                 inSection = false;
             }
+        } else if (element.classList.contains('video-title')) {
+            // Handle video title elements
+            if (element.dataset.originalInput) {
+                contents.push(element.dataset.originalInput);
+            }
         } else {
             // Regular card (not in a section)
-            if (element.classList.contains('link-card') && element.dataset.originalInput) {
-                contents.push(element.dataset.originalInput);
+            if (element.classList.contains('link-card')) {
+                // For link cards, prioritize originalInput if available,
+                // otherwise construct from videoLink
+                if (element.dataset.originalInput) {
+                    contents.push(element.dataset.originalInput);
+                } else if (element.dataset.videoLink) {
+                    // If we don't have originalInput but have videoLink, use that
+                    contents.push(element.dataset.videoLink);
+                }
             } else if ((element.classList.contains('text-card') || element.classList.contains('header-card')) && element.dataset.originalText) {
                 contents.push(element.dataset.originalText);
             }
@@ -262,6 +285,9 @@ function getCurrentLinksFromCards(container) {
     if (inSection) {
         contents.push('/++');
     }
+    
+    // For debugging - log the final content array
+    console.log('Final contents for sharing:', contents);
     
     return contents;
 }
