@@ -9,11 +9,20 @@ The spoiler tag system has been enhanced to support custom prompts:
 - When clicking the prompt, the spoiler content is revealed.
 - When clicking again, the original prompt is restored.
 
+## Text Alignment Improvements
+
+Text alignment now dynamically changes based on spoiler state:
+
+- Cards with hidden spoilers use left-aligned text to prevent layout issues
+- Cards with revealed spoilers use justified text for better reading experience
+- Cards without spoilers always use justified text
+
 ## Files Updated
 
 1. `js/components/link-processor.js`:
    - Updated `processSpoilerTags` function to use the new syntax
    - Modified `toggleSpoiler` to restore the original prompt text
+   - Added dynamic text alignment management when toggling spoilers
 
 2. `js/editor/spoiler-modal.js`:
    - Added support for custom prompt input
@@ -28,6 +37,11 @@ The spoiler tag system has been enhanced to support custom prompts:
 5. `js/app.js`:
    - Added reference to the new prompt input
    - Updated spoiler modal initialization
+
+6. `styles.css`:
+   - Updated spoiler styling for better display
+   - Added CSS classes for text alignment states (`has-spoiler` and `has-revealed-spoiler`)
+   - Modified spoiler revealed state to use `display: inline` for better text flow
 
 ## How to Use
 
