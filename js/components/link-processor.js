@@ -12,9 +12,14 @@ import { fixHtmlEntitiesInUrls } from '../utils/html-utils.js';
  * @returns {string} - Text with spoiler tags converted to HTML elements
  */
 function processSpoilerTags(text) {
-    // Replace spoiler tags with HTML elements
-    // Pattern: match text between // tags, but not greedy (non-greedy match with .*?)
-    return text.replace(/\/\/(.*?)\/\//g, '<span class="spoiler" data-spoiler-text="$1">show answer</span>');
+    // New pattern: ||optional custom prompt:spoiler text||
+    // Group 1: optional custom prompt
+    // Group 2: spoiler text
+    return text.replace(/\|\|(?:(.*?):)?(.*?)\|\|/g, (match, customPrompt, spoilerText) => {
+        const promptText = customPrompt ? customPrompt.trim() : 'show answer';
+        // Store the initial prompt in a data attribute as well, for easier restoration
+        return `<span class="spoiler" data-spoiler-text="${spoilerText.trim()}" data-prompt-text="${promptText}">${promptText}</span>`;
+    });
 }
 
 /**
@@ -30,7 +35,7 @@ function toggleSpoiler(event) {
     if (spoilerElement.classList.contains('revealed')) {
         // Hide spoiler text again
         spoilerElement.classList.remove('revealed');
-        spoilerElement.textContent = 'show answer';
+        spoilerElement.textContent = spoilerElement.dataset.promptText || 'show answer'; // Restore original prompt
         
         // Update card text alignment for hidden spoiler
         if (parentCard) {

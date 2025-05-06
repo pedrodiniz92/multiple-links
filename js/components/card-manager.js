@@ -41,7 +41,8 @@ function createTextCard(text, options = {}) {
         card.className = 'text-card';
         
         // Check if text contains spoiler tags
-        if (text.includes('//')) {
+        // Updated to check for new spoiler tag pattern
+        if (text.includes('||')) {
             // Process text with spoiler tags
             const processedHtml = processSpoilerTags(text);
             card.innerHTML = processedHtml;

@@ -1,275 +1,176 @@
-Okay, here's the diff for fixing bugs 1 and 2.
+Okay, here are the diffs for the proposed changes. I'll use ||custom prompt:spoiler text|| as the new spoiler syntax, where the custom prompt is optional. If only ||spoiler text|| is used, "show answer" will be the default prompt.
 
-For Bug 1 (Context [c:Context] tags not saving in the editor):
+Note on spoiler-modal.js HTML:
+The diff for spoiler-modal.js assumes you will add an HTML input field for the custom spoiler prompt in your main HTML structure where the modal is defined. For example:
 
-File: js/components/card-manager.js
-Function: getCurrentLinksFromCards
+HTML
 
-This function needs to correctly retrieve dataset.originalLink for link cards and ignore div.video-title elements when reconstructing content for the editor.
+<div class="form-group">
+    <label for="spoiler-custom-prompt-input">Custom Prompt Text (optional):</label>
+    <input type="text" id="spoiler-custom-prompt-input" placeholder="e.g., Reveal hint">
+</div>
+And that initSpoilerModal will receive options.spoilerCustomPromptInput referencing this element.
+
+1. js/components/link-processor.js
+
+Diff
+
+--- a/js/components/link-processor.js
++++ b/js/components/link-processor.js
+@@ -8,8 +8,15 @@
+  * @returns {string} - Text with spoiler tags converted to HTML elements
+  */
+ function processSpoilerTags(text) {
+-    // Replace spoiler tags with HTML elements
+-    // Pattern: match text between // tags, but not greedy (non-greedy match with .*?)
+-    return text.replace(/\/\/(.*?)\/\//g, '<span class="spoiler" data-spoiler-text="$1">show answer</span>');
++    // New pattern: ||optional custom prompt:spoiler text||
++    // Group 1: optional custom prompt
++    // Group 2: spoiler text
++    return text.replace(/\|\|(?:(.*?):)?(.*?)\|\|/g, (match, customPrompt, spoilerText) => {
++        const promptText = customPrompt ? customPrompt.trim() : 'show answer';
++        // Store the initial prompt in a data attribute as well, for easier restoration
++        return `<span class="spoiler" data-spoiler-text="${spoilerText.trim()}" data-prompt-text="${promptText}">${promptText}</span>`;
++    });
+ }
+ 
+ /**
+@@ -24,7 +31,7 @@
+     if (spoilerElement.classList.contains('revealed')) {
+         // Hide spoiler text again
+         spoilerElement.classList.remove('revealed');
+-        spoilerElement.textContent = 'show answer';
++        spoilerElement.textContent = spoilerElement.dataset.promptText || 'show answer'; // Restore original prompt
+         
+         // Update card text alignment for hidden spoiler
+         if (parentCard) {
+2. js/editor/spoiler-modal.js
+
+Diff
+
+--- a/js/editor/spoiler-modal.js
++++ b/js/editor/spoiler-modal.js
+@@ -7,6 +7,7 @@
+  * @param {HTMLElement} options.modalElement - The modal container element
+  * @param {HTMLElement} options.modalFeedback - Feedback element for notifications
+  * @param {HTMLElement} options.spoilerTextInput - The textarea input for spoiler text
++ * @param {HTMLElement} options.spoilerCustomPromptInput - The input for custom prompt text (optional)
+  * @param {HTMLElement} options.insertSpoilerBtn - Button to insert the spoiler
+  * @param {HTMLElement} options.cancelBtn - Button to cancel and close modal
+  * @param {Object} options.richEditorInstance - The rich editor instance for inserting content
+@@ -18,6 +19,7 @@
+         modalElement,
+         modalFeedback,
+         spoilerTextInput,
++        spoilerCustomPromptInput, // Added
+         insertSpoilerBtn,
+         cancelBtn,
+         richEditorInstance,
+@@ -38,6 +40,9 @@
+         
+         // Clear previous input
+         spoilerTextInput.value = '';
++        if (spoilerCustomPromptInput) {
++            spoilerCustomPromptInput.value = ''; // Clear custom prompt input
++        }
+         
+         // Show the modal with flexbox display
+         modalElement.style.display = 'flex';
+@@ -102,6 +107,7 @@
+      */
+     function insertSpoilerText() {
+         const spoilerText = spoilerTextInput.value.trim();
++        const customPrompt = spoilerCustomPromptInput ? spoilerCustomPromptInput.value.trim() : '';
+         
+         if (!spoilerText) {
+             // Show error feedback in the modal
+@@ -121,8 +127,12 @@
+             return;
+         }
+         
+-        // Format with spoiler tags
+-        const formattedSpoiler = `//${spoilerText}//`;
++        // Format with new spoiler tags, including optional custom prompt
++        let formattedSpoiler;
++        if (customPrompt) {
++            formattedSpoiler = `||${customPrompt}:${spoilerText}||`;
++        } else {
++            formattedSpoiler = `||${spoilerText}||`;
++        }
+         
+         console.log("Formatted spoiler:", formattedSpoiler);
+         
+@@ -154,10 +164,18 @@
+      * @param {string} selectedText - The text selected in the editor
+      */
+     function wrapSelectionInSpoilerTags(selectedText) {
++        // For wrapping selection, we'll use the default prompt or open modal for custom prompt.
++        // Simplified: always use default prompt for quick wrapping.
++        // If custom prompt is desired with selection, user can copy, open modal, paste, and add custom prompt.
++        // Or, this function could be enhanced to open the modal with selectedText pre-filled.
++        // Current implementation: Show modal if no text, otherwise wrap with default prompt.
++
+         if (!selectedText || !selectedText.trim()) {
+-            // If no text is selected, show the modal
++            // If no text is selected, show the modal to allow entering text and custom prompt
+             showModal();
+             return;
+         }
+         
+-        // If text is selected, wrap it with spoiler tags and insert it
+-        const formattedSpoiler = `//${selectedText}//`;
++        // If text is selected, wrap it with new spoiler tags (default prompt) and insert it
++        const formattedSpoiler = `||${selectedText}||`;
+         
+         if (richEditorInstance) {
+             // The standard way to handle selection in Quill
+3. js/components/card-manager.js
 
 Diff
 
 --- a/js/components/card-manager.js
 +++ b/js/components/card-manager.js
-@@ -111,57 +111,56 @@
-  */
- function getCurrentLinksFromCards(container) {
-     // Get all cards (link cards, text cards, header cards) and break spacers
-     const allElements = Array.from(container.children);
--    
-+
-     // Sort the elements by their position in the DOM to maintain the correct order
--    allElements.sort((a, b) => {
--        const position = a.compareDocumentPosition(b);
--        return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
--    });
--    
-+    // Sorting might be useful if elements can be reordered, otherwise, direct iteration is fine.
-+    // allElements.sort((a, b) => {
-+    //     const position = a.compareDocumentPosition(b);
-+    //     return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-+    // });
-+
-     const contents = [];
-     let inSection = false;
--    let sectionItems = [];
--    let sectionStartIndex = -1;
--    
-+
-     // First pass to identify section boundaries and breaks
-     allElements.forEach((element, index) => {
-         // For debugging - log element types to help diagnose sharing issues
--        console.log('Processing element:', element.className, 
--                    element.classList.contains('link-card') ? 'videoLink: ' + element.dataset.videoLink : '');
--        
-+        // console.log('Processing element:', element.className,
-+        //             element.classList.contains('link-card') ? 'videoLink: ' + element.dataset.videoLink : '');
-+
-         if (element.classList.contains('break-spacer')) {
-             // Add break tag
-             contents.push('---');
-         } else if (element.classList.contains('section-card')) {
-             // If this is the first card in a section, add section start tag
-             if (element.classList.contains('section-card-first') && !inSection) {
-                 contents.push('++/');
-                 inSection = true;
--                sectionStartIndex = contents.length;
-             }
--            
-+
-             // Add the card content
-             if (element.classList.contains('link-card')) {
-                 // For link cards, prioritize originalInput if available,
-                 // otherwise construct from videoLink
--                if (element.dataset.originalInput) {
--                    contents.push(element.dataset.originalInput);
-+                if (element.dataset.originalLink) { // Bug 1 Fix: Use originalLink
-+                    contents.push(element.dataset.originalLink);
-                 } else if (element.dataset.videoLink) {
-                     // If we don't have originalInput but have videoLink, use that
-                     contents.push(element.dataset.videoLink);
-                 }
-             } else if ((element.classList.contains('text-card') || element.classList.contains('header-card')) && element.dataset.originalText) {
-                 contents.push(element.dataset.originalText);
-             }
--            
-+
-             // If this is the last card in a section, add section end tag
-             if (element.classList.contains('section-card-last') && inSection) {
-                 contents.push('/++');
-                 inSection = false;
-             }
--        } else if (element.classList.contains('video-title')) {
--            // Handle video title elements
--            if (element.dataset.originalInput) {
--                contents.push(element.dataset.originalInput);
--            }
--        } else {
-+        } else if (element.classList.contains('video-title')) { // Bug 1 Fix: Ignore video-title for editor reconstruction
-+            // These are for display only in linksContainer.
-+            // The originalLink from the associated link-card already has this info.
-+            // Do nothing here.
-+        } else { // Non-section, non-break, non-video-title elements
-             // Regular card (not in a section)
-             if (element.classList.contains('link-card')) {
-                 // For link cards, prioritize originalInput if available,
-                 // otherwise construct from videoLink
--                if (element.dataset.originalInput) {
--                    contents.push(element.dataset.originalInput);
-+                if (element.dataset.originalLink) { // Bug 1 Fix: Use originalLink
-+                    contents.push(element.dataset.originalLink);
-                 } else if (element.dataset.videoLink) {
-                     // If we don't have originalInput but have videoLink, use that
-                     contents.push(element.dataset.videoLink);
-@@ -171,14 +170,14 @@
-             }
-         }
-     });
--    
-+
-     // If we're still in a section at the end, close it
-     if (inSection) {
-         contents.push('/++');
-     }
--    
-+
-     // For debugging - log the final content array
--    console.log('Final contents for sharing:', contents);
--    
-+    console.log('Final contents for editor/sharing:', contents);
-+
-     return contents;
- }
- 
-
-For Bug 2 (Duplicate video instance with [t:Title] tag in the linksContainer):
-
-File: js/app.js
-Function: processLinks (specifically the getFormattedDisplay callback)
-
-This change ensures the card itself doesn't display the title if a separate div.video-title was already rendered.
+@@ -31,7 +31,8 @@
+         card.className = 'text-card';
+         
+         // Check if text contains spoiler tags
+-        if (text.includes('//')) {
++        // Updated to check for new spoiler tag pattern
++        if (text.includes('||')) {
+             // Process text with spoiler tags
+             const processedHtml = processSpoilerTags(text);
+             card.innerHTML = processedHtml;
+4. README.md
 
 Diff
 
---- a/js/app.js
-+++ b/js/app.js
-@@ -160,13 +160,14 @@
-     // Keep track of the last videoId to group related clips under one title
-     let lastVideoId = null;
+--- a/README.md
++++ b/README.md
+@@ -15,7 +15,9 @@
  
-     // Process each item and create appropriate cards
-     for (const item of processedItems) {
-+        let isTitleDisplayedSeparately = false; // Bug 2 Fix: Flag for current item
-         if (item.type === 'break') {
-             // Create a break spacer
-             const breakSpacer = document.createElement('div');
-             breakSpacer.className = 'break-spacer';
-             linksContainer.appendChild(breakSpacer);
-         } else if (item.type === 'text') {
-             // Create a text card with section information if present
-@@ -180,12 +181,14 @@
-         } else if (item.type === 'link') {
-             // For links, only display a title if there's a custom title with [t:] tag
-             if (item.hasCustomTitle && item.customTitle && !item.skipTitle) {
-                 // Create a video title element (will be displayed above the cards)
-                 const titleElement = document.createElement('div');
-                 titleElement.className = 'video-title';
-                 titleElement.textContent = item.customTitle;
--                
-+
-                 // Store original data
-                 titleElement.dataset.originalInput = item.originalInput;
--                
-+
-                 // Add to container
-                 linksContainer.appendChild(titleElement);
-+                isTitleDisplayedSeparately = true; // Bug 2 Fix: Set the flag
-             }
--            
-+
-             // Extract YouTube info if it's a YouTube URL
-             let videoInfo = null;
-             let videoTitle = null; // This variable seems unused in the original card creation logic for display text
-@@ -206,12 +209,14 @@
-                 sectionPosition: item.sectionPosition || null,
-                 onCardClick: (videoLink) => {
-                     console.log('Card clicked, video link:', videoLink);
-                     // Load the video into the iframe
-                     loadVideo(videoLink);
-                 },
--                getFormattedDisplay: async (link) => {
-+                getFormattedDisplay: async (linkArgument) => { // linkArgument is item.link from the closure
-                     // If it's a YouTube URL with time parameters, format the display
-                     if (videoInfo && videoInfo.videoId) {
-                         const { videoId, params } = videoInfo;
--                        
-+
-                         // First try to get the video title if possible
-                         try {
-                             // Get video details in the background
-@@ -220,7 +225,7 @@
-                                     // Format the display text based on timestamps
-                                     let displayText;
--                                    
-+
-                                     // Always prioritize showing timestamps
-                                     // Start time only
-                                     if (params.start && !params.end) {
-@@ -236,7 +241,7 @@
-                                     else if (details.durationSeconds) {
-                                         displayText = `0:00 - ${formatTime(details.durationSeconds)}`;
-                                     }
--                                    // Fallback to title with duration
-+                                    // Fallback to title with duration (respecting isTitleDisplayedSeparately)
-                                     else if (details.title) {
-                                         displayText = details.title;
-                                         if (details.formattedDuration) {
-@@ -244,7 +249,9 @@
-                                         }
-                                     }
--                                    
-+
-                                     // Update the card content if it's still in the DOM
-+                                    // and if the title isn't already shown separately (if displayText is title)
-+                                    // This async update needs care if it sets a title.
-                                     if (document.contains(card)) {
-                                         const contentElement = card.querySelector('.card-content');
-                                         if (contentElement) {
-@@ -256,35 +263,42 @@
-                         } catch (e) {
-                             console.warn('Error fetching video details:', e);
-                         }
--                        
-+
-                         // Meanwhile, show an initial display
-                         // Start time only
-                         if (params.start && !params.end) {
-                             return formatTime(params.start);
-                         }
--                        
-                         // Both start and end times
-                         if (params.start && params.end) {
-                             return `${formatTime(params.start)} - ${formatTime(params.end)}`;
-                         }
--                        
-                         // End time only
-                         if (!params.start && params.end) {
-                             return `0:00 - ${formatTime(params.end)}`;
-                         }
--                        
--                        // No timestamps yet, show loading indicator (will be replaced with full duration)
--                        return 'Loading timestamp...';
-+
-+                        // Bug 2 Fix: If timestamps aren't primary, consider title if not displayed separately
-+                        if (item.hasCustomTitle && item.customTitle && !item.skipTitle && !isTitleDisplayedSeparately) {
-+                            return item.customTitle;
-+                        }
-+                        // Fallback for YouTube links, allowing async update later
-+                        return 'Loading video info...';
-                     }
--                    
--                    // If there's a custom title, use it
--                    if (item.hasCustomTitle && item.customTitle) {
-+
-+                    // Bug 2 Fix: Non-YouTube links or other cases:
-+                    // Display custom title in card ONLY if it wasn't displayed separately.
-+                    if (item.hasCustomTitle && item.customTitle && !item.skipTitle && !isTitleDisplayedSeparately) {
-                         return item.customTitle;
-                     }
--                    
-+
-                     // Fallback to a truncated URL
--                    return link.substring(0, 50) + (link.length > 50 ? '...' : '');
-+                    return linkArgument.substring(0, 50) + (linkArgument.length > 50 ? '...' : '');
-                 }
-             });
--            
-+
-             linksContainer.appendChild(card);
--            
-+
-             // Save the first link card for activation
-             if (!firstLinkCard) {
-                 firstLinkCard = card;
+ ### Spoiler Tags
+ - Users can add spoilers using either the spoiler button or by wrapping text with `||` tags.
+-- When processing text, `processSpoilerTags` converts these tags to HTML elements
++- To use a custom prompt (the text shown before revealing the spoiler), use the format: `||Custom Prompt Text:Actual spoiler content||`
++- If no custom prompt is specified (e.g., `||Actual spoiler content||`), the default prompt "show answer" will be used.
++- When processing text, `processSpoilerTags` converts these tags into HTML elements.
+ - The spoiler styling in CSS controls how they appear and behave
+ - The `toggleSpoiler` function handles the clicking behavior to reveal/hide the spoiler text
+ 
+Summary of Changes:
 
-These diffs should address the core issues for both bugs. Remember to test thoroughly after applying them.
+New Spoiler Tag: ||...||
+Custom Prompt Syntax: ||My custom prompt:The secret is...||
+Default Prompt: If no custom prompt is provided (e.g., ||The secret is...||), "show answer" is used.
+link-processor.js:
+processSpoilerTags updated to parse the new syntax and generate HTML with the correct prompt text. It now also stores the initial prompt text in data-prompt-text.
+toggleSpoiler updated to restore the original prompt text (custom or default) when hiding the spoiler.
+spoiler-modal.js:
+Assumes a new input field for spoilerCustomPromptInput.
+insertSpoilerText constructs the new spoiler tag format, including the custom prompt if provided.
+wrapSelectionInSpoilerTags updated to use the new basic spoiler tag (could be enhanced to use the modal for custom prompts with selections).
+card-manager.js:
+Updated the check from text.includes('//') to text.includes('||') to correctly identify text that might contain spoilers.
+README.md:
+Documentation updated to reflect the new spoiler tag syntax and the custom prompt feature.
+These diffs should implement the requested changes. Remember to add the new input field to your spoiler modal's HTML.

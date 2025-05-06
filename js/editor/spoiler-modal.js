@@ -9,6 +9,7 @@
  * @param {HTMLElement} options.modalElement - The modal container element
  * @param {HTMLElement} options.modalFeedback - Feedback element for notifications
  * @param {HTMLElement} options.spoilerTextInput - The textarea input for spoiler text
+ * @param {HTMLElement} options.spoilerCustomPromptInput - The input for custom prompt text (optional)
  * @param {HTMLElement} options.insertSpoilerBtn - Button to insert the spoiler
  * @param {HTMLElement} options.cancelBtn - Button to cancel and close modal
  * @param {Object} options.richEditorInstance - The rich editor instance for inserting content
@@ -20,6 +21,7 @@ function initSpoilerModal(options) {
         modalElement,
         modalFeedback,
         spoilerTextInput,
+        spoilerCustomPromptInput, // Added
         insertSpoilerBtn,
         cancelBtn,
         richEditorInstance,
@@ -42,6 +44,9 @@ function initSpoilerModal(options) {
         
         // Clear previous input
         spoilerTextInput.value = '';
+        if (spoilerCustomPromptInput) {
+            spoilerCustomPromptInput.value = ''; // Clear custom prompt input
+        }
         
         // Show the modal with flexbox display
         modalElement.style.display = 'flex';
@@ -119,6 +124,7 @@ function initSpoilerModal(options) {
      */
     function insertSpoilerText() {
         const spoilerText = spoilerTextInput.value.trim();
+        const customPrompt = spoilerCustomPromptInput ? spoilerCustomPromptInput.value.trim() : '';
         
         if (!spoilerText) {
             // Show error feedback in the modal
@@ -138,8 +144,13 @@ function initSpoilerModal(options) {
             return;
         }
         
-        // Format with spoiler tags
-        const formattedSpoiler = `//${spoilerText}//`;
+        // Format with new spoiler tags, including optional custom prompt
+        let formattedSpoiler;
+        if (customPrompt) {
+            formattedSpoiler = `||${customPrompt}:${spoilerText}||`;
+        } else {
+            formattedSpoiler = `||${spoilerText}||`;
+        }
         
         console.log("Formatted spoiler:", formattedSpoiler);
         
@@ -167,14 +178,20 @@ function initSpoilerModal(options) {
      * @param {string} selectedText - The text selected in the editor
      */
     function wrapSelectionInSpoilerTags(selectedText) {
+        // For wrapping selection, we'll use the default prompt or open modal for custom prompt.
+        // Simplified: always use default prompt for quick wrapping.
+        // If custom prompt is desired with selection, user can copy, open modal, paste, and add custom prompt.
+        // Or, this function could be enhanced to open the modal with selectedText pre-filled.
+        // Current implementation: Show modal if no text, otherwise wrap with default prompt.
+
         if (!selectedText || !selectedText.trim()) {
-            // If no text is selected, show the modal
+            // If no text is selected, show the modal to allow entering text and custom prompt
             showModal();
             return;
         }
         
-        // If text is selected, wrap it with spoiler tags and insert it
-        const formattedSpoiler = `//${selectedText}//`;
+        // If text is selected, wrap it with new spoiler tags (default prompt) and insert it
+        const formattedSpoiler = `||${selectedText}||`;
         
         if (richEditorInstance) {
             // The standard way to handle selection in Quill

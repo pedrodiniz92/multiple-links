@@ -54,7 +54,7 @@ let youtubeModal, modalFeedback, youtubeUrlInput, youtubeTitleInput, youtubeCont
 let startTimeInput, endTimeInput, fetchTitleBtn, insertLinkBtn, cancelBtn, lineBreakBtn;
 
 // Spoiler modal elements
-let spoilerModal, spoilerModalFeedback, spoilerTextInput, insertSpoilerBtn, cancelSpoilerBtn, addSpoilerBtn;
+let spoilerModal, spoilerModalFeedback, spoilerTextInput, spoilerCustomPromptInput, insertSpoilerBtn, cancelSpoilerBtn, addSpoilerBtn;
 
 // Auth modal elements
 let signinModal, signupModal, signinModalFeedback, signupModalFeedback, authLinksContainer;
@@ -110,6 +110,7 @@ function initDOMElements() {
     spoilerModal = document.getElementById('spoiler-modal');
     spoilerModalFeedback = document.getElementById('spoiler-modal-feedback');
     spoilerTextInput = document.getElementById('spoiler-text');
+    spoilerCustomPromptInput = document.getElementById('spoiler-custom-prompt-input');
     insertSpoilerBtn = document.getElementById('insert-spoiler-btn');
     cancelSpoilerBtn = document.getElementById('cancel-spoiler-btn');
     
@@ -846,6 +847,7 @@ function initSpoilerModalDialog() {
         modalElement: spoilerModal,
         modalFeedback: spoilerModalFeedback,
         spoilerTextInput,
+        spoilerCustomPromptInput,
         insertSpoilerBtn,
         cancelBtn: cancelSpoilerBtn,
         richEditorInstance,
