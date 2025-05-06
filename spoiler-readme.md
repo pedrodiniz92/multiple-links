@@ -1,5 +1,22 @@
-This was written for a different project, but I want to implement the same idea here.
-I want spoiler tags working as listed below, as well as the quill editor button. Remember that for this project, we have a modular js approach, so you may have to adapt some of this content to our current project.
+# INTRO: Here's what I want
+
+# Spoiler tags
+If text comes between // tags, it gets spoiler treatment.
+The text is shown as a light gray background with ?. When clicked, it is revealed, still with the light gray background. Clicked again, it goes back to spoiler mode.
+
+This can happen inline, as part of a card
+
+## Spoiler Syntax
+Question: Where is the Eiffel Tower? //In Paris, France.//
+
+Prompt #4
+# Spoiler button
+Create a ? Button in the rich text editor.
+If I have text selected and click it, it wraps that text in // tags.
+If I have no selected text, it opens a modal for me to enter text, then wraps // tags around it and adds it to the material.
+
+# INSPIRATION: Here's what worked in a different project
+This was written for a different project, so use your own judgment to figure out how much we can use from it. Remember that the current project has a modular js approach, so we need to respect that.
 
 # Spoiler Tag Implementation
 
