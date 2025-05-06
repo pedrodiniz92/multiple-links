@@ -494,6 +494,35 @@ button {
     color: var(--text-secondary);
 }
 
+/* Section styles */
+.section-card {
+    margin-bottom: 0 !important;
+    border-bottom: none !important;
+}
+
+.section-card-first {
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.section-card-middle {
+    border-radius: 0 !important;
+    border-top: none !important;
+}
+
+.section-card-last {
+    border-radius: 0 0 8px 8px !important;
+    border-top: none !important;
+    margin-bottom: 0.8rem !important;
+}
+
+/* Break styles */
+.break-spacer {
+    height: 0.8rem; /* Same as normal card margin-bottom */
+    width: 100%;
+    display: block;
+    background: transparent;
+}
+
 .link-card {
     cursor: pointer;
     display: flex;
@@ -610,12 +639,31 @@ button {
 }
 
 .link-card.active {
-    border-color: var(--accent-primary);
+    border-color: var(--accent-primary) !important;
+    border: 1px solid var(--accent-primary) !important;
 }
 
 .link-card.active .card-number,
 .link-card.active .card-play-button {
     opacity: 1;
+}
+
+/* Fix active section cards to ensure border is visible */
+.link-card.active.section-card {
+    z-index: 1; /* Ensure active card is above other cards */
+}
+
+.link-card.active.section-card-first {
+    border-bottom: 1px solid var(--accent-primary) !important;
+}
+
+.link-card.active.section-card-middle {
+    border-top: 1px solid var(--accent-primary) !important;
+    border-bottom: 1px solid var(--accent-primary) !important;
+}
+
+.link-card.active.section-card-last {
+    border-top: 1px solid var(--accent-primary) !important;
 }
 
 .video-title {

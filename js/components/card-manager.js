@@ -19,9 +19,12 @@ function resetCardCounter() {
 /**
  * Create a text card for plain text or headers
  * @param {string} text - The text content to display
+ * @param {Object} options - Additional options for the card
+ * @param {boolean} options.isSection - Whether this card is part of a section
+ * @param {string} options.sectionPosition - The position in the section (first, middle, last, first-last)
  * @returns {HTMLElement} - The created text card element
  */
-function createTextCard(text) {
+function createTextCard(text, options = {}) {
     // Check if this is a header (starts with #)
     const isHeader = text.trim().startsWith('#');
     
@@ -62,6 +65,23 @@ function createTextCard(text) {
     // Store the original text for editing (including the # for headers)
     card.dataset.originalText = text;
     
+    // Apply section styling if this card is part of a section
+    if (options.isSection) {
+        card.classList.add('section-card');
+        
+        if (options.sectionPosition === 'first' || options.sectionPosition === 'first-last') {
+            card.classList.add('section-card-first');
+        }
+        
+        if (options.sectionPosition === 'middle') {
+            card.classList.add('section-card-middle');
+        }
+        
+        if (options.sectionPosition === 'last' || options.sectionPosition === 'first-last') {
+            card.classList.add('section-card-last');
+        }
+    }
+    
     return card;
 }
 
@@ -74,6 +94,8 @@ function createTextCard(text) {
  * @param {string} options.customContext - The custom context text
  * @param {Function} options.onCardClick - Callback function when the card is clicked
  * @param {Function} options.getFormattedDisplay - Function to get the formatted display text
+ * @param {boolean} options.isSection - Whether this card is part of a section
+ * @param {string} options.sectionPosition - The position in the section (first, middle, last, first-last)
  * @returns {HTMLElement} - The created link card element
  */
 function createLinkCard(options) {
@@ -83,7 +105,9 @@ function createLinkCard(options) {
         hasCustomContext = false,
         customContext = '',
         onCardClick,
-        getFormattedDisplay
+        getFormattedDisplay,
+        isSection = false,
+        sectionPosition = null
     } = options;
 
     // Create card for the link
@@ -159,6 +183,23 @@ function createLinkCard(options) {
         });
     }
     
+    // Apply section styling if this card is part of a section
+    if (isSection) {
+        card.classList.add('section-card');
+        
+        if (sectionPosition === 'first' || sectionPosition === 'first-last') {
+            card.classList.add('section-card-first');
+        }
+        
+        if (sectionPosition === 'middle') {
+            card.classList.add('section-card-middle');
+        }
+        
+        if (sectionPosition === 'last' || sectionPosition === 'first-last') {
+            card.classList.add('section-card-last');
+        }
+    }
+    
     return card;
 }
 
@@ -168,30 +209,59 @@ function createLinkCard(options) {
  * @returns {Array<string>} - Array of card contents (links or text)
  */
 function getCurrentLinksFromCards(container) {
-    // Get all cards (link cards, text cards, and header cards)
-    const allCards = [
-        ...container.querySelectorAll('.link-card'), 
-        ...container.querySelectorAll('.text-card'),
-        ...container.querySelectorAll('.header-card')
-    ];
+    // Get all cards (link cards, text cards, header cards) and break spacers
+    const allElements = Array.from(container.children);
     
-    // Sort the cards by their position in the DOM to maintain the correct order
-    allCards.sort((a, b) => {
+    // Sort the elements by their position in the DOM to maintain the correct order
+    allElements.sort((a, b) => {
         const position = a.compareDocumentPosition(b);
         return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
     });
     
     const contents = [];
+    let inSection = false;
+    let sectionItems = [];
+    let sectionStartIndex = -1;
     
-    allCards.forEach(card => {
-        if (card.classList.contains('link-card') && card.dataset.originalLink) {
-            // Get the original link input from the data attribute (includes [Title]Link format)
-            contents.push(card.dataset.originalLink);
-        } else if ((card.classList.contains('text-card') || card.classList.contains('header-card')) && card.dataset.originalText) {
-            // Get the text content for text and header cards
-            contents.push(card.dataset.originalText);
+    // First pass to identify section boundaries and breaks
+    allElements.forEach((element, index) => {
+        if (element.classList.contains('break-spacer')) {
+            // Add break tag
+            contents.push('---');
+        } else if (element.classList.contains('section-card')) {
+            // If this is the first card in a section, add section start tag
+            if (element.classList.contains('section-card-first') && !inSection) {
+                contents.push('++/');
+                inSection = true;
+                sectionStartIndex = contents.length;
+            }
+            
+            // Add the card content
+            if (element.classList.contains('link-card') && element.dataset.originalInput) {
+                contents.push(element.dataset.originalInput);
+            } else if ((element.classList.contains('text-card') || element.classList.contains('header-card')) && element.dataset.originalText) {
+                contents.push(element.dataset.originalText);
+            }
+            
+            // If this is the last card in a section, add section end tag
+            if (element.classList.contains('section-card-last') && inSection) {
+                contents.push('/++');
+                inSection = false;
+            }
+        } else {
+            // Regular card (not in a section)
+            if (element.classList.contains('link-card') && element.dataset.originalInput) {
+                contents.push(element.dataset.originalInput);
+            } else if ((element.classList.contains('text-card') || element.classList.contains('header-card')) && element.dataset.originalText) {
+                contents.push(element.dataset.originalText);
+            }
         }
     });
+    
+    // If we're still in a section at the end, close it
+    if (inSection) {
+        contents.push('/++');
+    }
     
     return contents;
 }

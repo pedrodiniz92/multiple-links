@@ -145,7 +145,7 @@ function splitAndProcessInput(input) {
 }
 
 /**
- * Process links from input text
+ * Process links from input text, including section tags
  * @param {string} inputText - The input text containing links and text
  * @returns {Array<Object>} - Array of processed items (links and text)
  */
@@ -153,41 +153,185 @@ function processInputText(inputText) {
     // Split the input into lines
     const inputs = splitAndProcessInput(inputText);
     
+    // Array to store processed items
+    const processedItems = [];
+    
+    // Track section state
+    let inSection = false;
+    let sectionItems = [];
+    
     // Process each line
-    return inputs.map(input => {
+    for (let i = 0; i < inputs.length; i++) {
+        const input = inputs[i];
+        
         // Fix HTML entities in URLs
         const fixedInput = fixHtmlEntitiesInUrls(input);
         
+        // Check for section start tag by itself
+        if (fixedInput.trim() === '++/') {
+            inSection = true;
+            continue; // Skip the section start tag itself
+        }
+        
+        // Check for section start tag inline with content
+        if (fixedInput.trim().startsWith('++/') && fixedInput.trim() !== '++/') {
+            inSection = true;
+            // Extract the content after the section tag
+            const content = fixedInput.trim().substring(3);
+            // Process the content as a normal item
+            processInlineContent(content, sectionItems, processedItems, inSection);
+            continue;
+        }
+        
+        // Check for break tag
+        if (fixedInput.trim() === '---') {
+            // Add a break item to processed items
+            processedItems.push({
+                type: 'break',
+                content: '---'
+            });
+            continue; // Skip the break tag itself
+        }
+        
+        // Check for section end tag by itself
+        if (fixedInput.trim() === '/++') {
+            // Process the section items
+            if (sectionItems.length > 0) {
+                processingSectionItems(sectionItems, processedItems);
+                // Reset section items
+                sectionItems = [];
+            }
+            
+            inSection = false;
+            continue; // Skip the section end tag itself
+        }
+        
+        // Check for content with inline section end tag
+        if (inSection && fixedInput.includes('/++')) {
+            // Split the line at the section end tag
+            const parts = fixedInput.split('/++');
+            if (parts.length >= 2) {
+                // Process the content before the section end tag
+                const contentBeforeEnd = parts[0].trim();
+                if (contentBeforeEnd) {
+                    processInlineContent(contentBeforeEnd, sectionItems, processedItems, true);
+                }
+                
+                // Process the section items
+                if (sectionItems.length > 0) {
+                    processingSectionItems(sectionItems, processedItems);
+                    sectionItems = [];
+                    inSection = false;
+                }
+                
+                // Process any content after the section end tag
+                const contentAfterEnd = parts.slice(1).join('/++').trim();
+                if (contentAfterEnd) {
+                    processInlineContent(contentAfterEnd, sectionItems, processedItems, false);
+                }
+                
+                continue;
+            }
+        }
+        
+        // Process the current line
+        processInlineContent(fixedInput, sectionItems, processedItems, inSection);
+    }
+    
+    // Helper function to process content into the appropriate items array
+    function processInlineContent(content, sectionItems, processedItems, isInSection) {
+        let processedItem;
+        
         // Check if the input contains a URL pattern
-        const containsUrl = fixedInput.match(/https?:\/\/[^\s]+/);
+        const containsUrl = content.match(/https?:\/\/[^\s]+/);
         
         if (!containsUrl) {
             // This is a text entry
-            return {
+            processedItem = {
                 type: 'text',
-                content: fixedInput
+                content: content
             };
         } else {
             // Parse the link with any title or context tags
-            const parsedLink = parseLinkWithTitle(fixedInput);
+            const parsedLink = parseLinkWithTitle(content);
             
             // Validate the URL
             if (!isValidUrl(parsedLink.link)) {
                 // If URL is invalid, treat as text
-                return {
+                processedItem = {
                     type: 'text',
-                    content: fixedInput
+                    content: content
+                };
+            } else {
+                // This is a valid link
+                processedItem = {
+                    type: 'link',
+                    originalInput: content,
+                    ...parsedLink
                 };
             }
-            
-            // This is a valid link
-            return {
-                type: 'link',
-                originalInput: fixedInput,
-                ...parsedLink
-            };
         }
-    });
+        
+        // Add to section items if in a section, otherwise add to processed items
+        if (isInSection) {
+            sectionItems.push(processedItem);
+        } else {
+            processedItems.push(processedItem);
+        }
+    }
+    
+    // Helper function to process section items and add them to processedItems
+    function processingSectionItems(items, targetArray) {
+        if (items.length > 0) {
+            // Add section items to targetArray with section metadata
+            const firstItem = { ...items[0], isSection: true, sectionPosition: 'first' };
+            
+            if (items.length === 1) {
+                // If there's only one item, it's both first and last
+                firstItem.sectionPosition = 'first-last';
+                targetArray.push(firstItem);
+            } else if (items.length === 2) {
+                // If there are two items, we have first and last
+                targetArray.push(firstItem);
+                targetArray.push({ 
+                    ...items[1], 
+                    isSection: true, 
+                    sectionPosition: 'last' 
+                });
+            } else {
+                // If there are more than two items, we have first, middle, and last
+                targetArray.push(firstItem);
+                
+                // Middle items
+                for (let j = 1; j < items.length - 1; j++) {
+                    targetArray.push({ 
+                        ...items[j], 
+                        isSection: true, 
+                        sectionPosition: 'middle' 
+                    });
+                }
+                
+                // Last item
+                targetArray.push({ 
+                    ...items[items.length - 1], 
+                    isSection: true, 
+                    sectionPosition: 'last' 
+                });
+            }
+            
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // If we're still in a section at the end, add remaining section items
+    // (this handles the case where a section isn't properly closed)
+    if (inSection && sectionItems.length > 0) {
+        processingSectionItems(sectionItems, processedItems);
+    }
+    
+    return processedItems;
 }
 
 // Export the public API

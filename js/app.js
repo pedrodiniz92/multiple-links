@@ -47,7 +47,7 @@ import { getCurrentUser, isSessionValid } from './services/auth-service.js';
 // DOM elements
 let resizer, leftPanel, rightPanel, goButton, linksContainer, viewer;
 let clipboardFeedback, themeToggleIcon, htmlElement, urlInput, inputSection;
-let richEditor, editorContainer, addYouTubeBtn;
+let richEditor, editorContainer, addYouTubeBtn, sectionStartBtn, sectionEndBtn, breakBtn;
 
 // YouTube modal elements
 let youtubeModal, modalFeedback, youtubeUrlInput, youtubeTitleInput, youtubeContextInput;
@@ -89,6 +89,9 @@ function initDOMElements() {
     editorContainer = document.getElementById('editor-container');
     addYouTubeBtn = document.getElementById('add-youtube-link');
     addSpoilerBtn = document.getElementById('add-spoiler');
+    sectionStartBtn = document.getElementById('section-start');
+    sectionEndBtn = document.getElementById('section-end');
+    breakBtn = document.getElementById('add-break');
     
     // YouTube modal elements
     youtubeModal = document.getElementById('add-youtube-modal');
@@ -174,9 +177,17 @@ async function processLinks() {
     
     // Process each item and create appropriate cards
     for (const item of processedItems) {
-        if (item.type === 'text') {
-            // Create a text card
-            const textCard = createTextCard(item.content);
+        if (item.type === 'break') {
+            // Create a break spacer
+            const breakSpacer = document.createElement('div');
+            breakSpacer.className = 'break-spacer';
+            linksContainer.appendChild(breakSpacer);
+        } else if (item.type === 'text') {
+            // Create a text card with section information if present
+            const textCard = createTextCard(item.content, {
+                isSection: item.isSection || false,
+                sectionPosition: item.sectionPosition || null
+            });
             linksContainer.appendChild(textCard);
         } else if (item.type === 'link') {
             // For links, only display a title if there's a custom title with [t:] tag
@@ -213,6 +224,8 @@ async function processLinks() {
                 link: item.link,
                 hasCustomContext: item.hasCustomContext,
                 customContext: item.customContext,
+                isSection: item.isSection || false,
+                sectionPosition: item.sectionPosition || null,
                 onCardClick: (videoLink) => {
                     console.log('Card clicked, video link:', videoLink);
                     // Load the video into the iframe
@@ -620,6 +633,9 @@ function initRichTextEditor() {
         // Initialize Spoiler modal after editor is ready
         initSpoilerModalDialog();
         
+        // Setup section button handlers
+        setupSectionButtons();
+        
         return true;
     } else {
         console.error('Rich editor instance could not be created');
@@ -692,6 +708,102 @@ function initYouTubeModalDialog() {
         console.error('YouTube modal initialization failed');
         return false;
     }
+}
+
+// Setup section and break button handlers
+function setupSectionButtons() {
+    console.log('Setting up section and break button handlers...');
+    
+    if (!sectionStartBtn || !sectionEndBtn || !breakBtn || !richEditorInstance) {
+        console.error('Required DOM elements for section/break buttons not found or rich editor not initialized');
+        return false;
+    }
+    
+    // Remove any existing listeners to avoid duplicates
+    const newSectionStartBtn = sectionStartBtn.cloneNode(true);
+    if (sectionStartBtn.parentNode) {
+        sectionStartBtn.parentNode.replaceChild(newSectionStartBtn, sectionStartBtn);
+        // Update the reference
+        sectionStartBtn = newSectionStartBtn;
+    }
+    
+    const newSectionEndBtn = sectionEndBtn.cloneNode(true);
+    if (sectionEndBtn.parentNode) {
+        sectionEndBtn.parentNode.replaceChild(newSectionEndBtn, sectionEndBtn);
+        // Update the reference
+        sectionEndBtn = newSectionEndBtn;
+    }
+    
+    // Add click event to handle Section Start button
+    sectionStartBtn.addEventListener('click', () => {
+        // Insert section start tag
+        const quill = richEditorInstance.getQuill();
+        
+        if (quill) {
+            const selection = quill.getSelection();
+            const insertPosition = selection ? selection.index : quill.getLength();
+            
+            // Insert the section start tag
+            quill.insertText(insertPosition, "++/\n");
+            
+            // Set cursor after the inserted tag
+            quill.setSelection(insertPosition + 3);
+        } else {
+            // Fallback if Quill is not available
+            richEditorInstance.insertContent("++/\n");
+        }
+    });
+    
+    // Add click event to handle Section End button
+    sectionEndBtn.addEventListener('click', () => {
+        // Insert section end tag
+        const quill = richEditorInstance.getQuill();
+        
+        if (quill) {
+            const selection = quill.getSelection();
+            const insertPosition = selection ? selection.index : quill.getLength();
+            
+            // Insert the section end tag
+            quill.insertText(insertPosition, "\n/++");
+            
+            // Set cursor after the inserted tag
+            quill.setSelection(insertPosition + 4);
+        } else {
+            // Fallback if Quill is not available
+            richEditorInstance.insertContent("\n/++");
+        }
+    });
+    
+    // Remove any existing listeners for break button
+    const newBreakBtn = breakBtn.cloneNode(true);
+    if (breakBtn.parentNode) {
+        breakBtn.parentNode.replaceChild(newBreakBtn, breakBtn);
+        // Update the reference
+        breakBtn = newBreakBtn;
+    }
+    
+    // Add click event to handle Break button
+    breakBtn.addEventListener('click', () => {
+        // Insert break tag
+        const quill = richEditorInstance.getQuill();
+        
+        if (quill) {
+            const selection = quill.getSelection();
+            const insertPosition = selection ? selection.index : quill.getLength();
+            
+            // Insert the break tag
+            quill.insertText(insertPosition, "\n---\n");
+            
+            // Set cursor after the inserted tag
+            quill.setSelection(insertPosition + 5);
+        } else {
+            // Fallback if Quill is not available
+            richEditorInstance.insertContent("\n---\n");
+        }
+    });
+    
+    console.log('Section and break button handlers set up successfully');
+    return true;
 }
 
 // Initialize Spoiler modal
