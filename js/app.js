@@ -177,6 +177,7 @@ async function processLinks() {
     
     // Process each item and create appropriate cards
     for (const item of processedItems) {
+        let isTitleDisplayedSeparately = false; // Bug 2 Fix: Flag for current item
         if (item.type === 'break') {
             // Create a break spacer
             const breakSpacer = document.createElement('div');
@@ -196,12 +197,13 @@ async function processLinks() {
                 const titleElement = document.createElement('div');
                 titleElement.className = 'video-title';
                 titleElement.textContent = item.customTitle;
-                
+
                 // Store original data
                 titleElement.dataset.originalInput = item.originalInput;
-                
+
                 // Add to container
                 linksContainer.appendChild(titleElement);
+                isTitleDisplayedSeparately = true; // Bug 2 Fix: Set the flag
             }
             
             // Extract YouTube info if it's a YouTube URL
@@ -231,11 +233,11 @@ async function processLinks() {
                     // Load the video into the iframe
                     loadVideo(videoLink);
                 },
-                getFormattedDisplay: async (link) => {
+                getFormattedDisplay: async (linkArgument) => { // linkArgument is item.link from the closure
                     // If it's a YouTube URL with time parameters, format the display
                     if (videoInfo && videoInfo.videoId) {
                         const { videoId, params } = videoInfo;
-                        
+
                         // First try to get the video title if possible
                         try {
                             // Get video details in the background
@@ -243,8 +245,8 @@ async function processLinks() {
                                 if (details) {
                                     // Format the display text based on timestamps
                                     let displayText;
-                                    
-                                    // Always prioritize showing timestamps 
+
+                                    // Always prioritize showing timestamps
                                     // Start time only
                                     if (params.start && !params.end) {
                                         displayText = formatTime(params.start);
@@ -261,15 +263,17 @@ async function processLinks() {
                                     else if (details.durationSeconds) {
                                         displayText = `0:00 - ${formatTime(details.durationSeconds)}`;
                                     }
-                                    // Fallback to title with duration
+                                    // Fallback to title with duration (respecting isTitleDisplayedSeparately)
                                     else if (details.title) {
                                         displayText = details.title;
                                         if (details.formattedDuration) {
                                             displayText += ` (${details.formattedDuration})`;
                                         }
                                     }
-                                    
+
                                     // Update the card content if it's still in the DOM
+                                    // and if the title isn't already shown separately (if displayText is title)
+                                    // This async update needs care if it sets a title.
                                     if (document.contains(card)) {
                                         const contentElement = card.querySelector('.card-content');
                                         if (contentElement) {
@@ -281,34 +285,39 @@ async function processLinks() {
                         } catch (e) {
                             console.warn('Error fetching video details:', e);
                         }
-                        
+
                         // Meanwhile, show an initial display
                         // Start time only
                         if (params.start && !params.end) {
                             return formatTime(params.start);
                         }
-                        
+
                         // Both start and end times
                         if (params.start && params.end) {
                             return `${formatTime(params.start)} - ${formatTime(params.end)}`;
                         }
-                        
+
                         // End time only
                         if (!params.start && params.end) {
                             return `0:00 - ${formatTime(params.end)}`;
                         }
-                        
-                        // No timestamps yet, show loading indicator (will be replaced with full duration)
-                        return 'Loading timestamp...';
+
+                        // Bug 2 Fix: If timestamps aren't primary, consider title if not displayed separately
+                        if (item.hasCustomTitle && item.customTitle && !item.skipTitle && !isTitleDisplayedSeparately) {
+                            return item.customTitle;
+                        }
+                        // Fallback for YouTube links, allowing async update later
+                        return 'Loading video info...';
                     }
-                    
-                    // If there's a custom title, use it
-                    if (item.hasCustomTitle && item.customTitle) {
+
+                    // Bug 2 Fix: Non-YouTube links or other cases:
+                    // Display custom title in card ONLY if it wasn't displayed separately.
+                    if (item.hasCustomTitle && item.customTitle && !item.skipTitle && !isTitleDisplayedSeparately) {
                         return item.customTitle;
                     }
-                    
+
                     // Fallback to a truncated URL
-                    return link.substring(0, 50) + (link.length > 50 ? '...' : '');
+                    return linkArgument.substring(0, 50) + (linkArgument.length > 50 ? '...' : '');
                 }
             });
             

@@ -211,24 +211,23 @@ function createLinkCard(options) {
 function getCurrentLinksFromCards(container) {
     // Get all cards (link cards, text cards, header cards) and break spacers
     const allElements = Array.from(container.children);
-    
+
     // Sort the elements by their position in the DOM to maintain the correct order
-    allElements.sort((a, b) => {
-        const position = a.compareDocumentPosition(b);
-        return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-    });
-    
+    // Sorting might be useful if elements can be reordered, otherwise, direct iteration is fine.
+    // allElements.sort((a, b) => {
+    //     const position = a.compareDocumentPosition(b);
+    //     return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    // });
+
     const contents = [];
     let inSection = false;
-    let sectionItems = [];
-    let sectionStartIndex = -1;
-    
+
     // First pass to identify section boundaries and breaks
     allElements.forEach((element, index) => {
         // For debugging - log element types to help diagnose sharing issues
-        console.log('Processing element:', element.className, 
-                    element.classList.contains('link-card') ? 'videoLink: ' + element.dataset.videoLink : '');
-        
+        // console.log('Processing element:', element.className,
+        //             element.classList.contains('link-card') ? 'videoLink: ' + element.dataset.videoLink : '');
+
         if (element.classList.contains('break-spacer')) {
             // Add break tag
             contents.push('---');
@@ -237,15 +236,14 @@ function getCurrentLinksFromCards(container) {
             if (element.classList.contains('section-card-first') && !inSection) {
                 contents.push('++/');
                 inSection = true;
-                sectionStartIndex = contents.length;
             }
-            
+
             // Add the card content
             if (element.classList.contains('link-card')) {
-                // For link cards, prioritize originalInput if available,
+                // For link cards, prioritize originalLink if available,
                 // otherwise construct from videoLink
-                if (element.dataset.originalInput) {
-                    contents.push(element.dataset.originalInput);
+                if (element.dataset.originalLink) { // Bug 1 Fix: Use originalLink
+                    contents.push(element.dataset.originalLink);
                 } else if (element.dataset.videoLink) {
                     // If we don't have originalInput but have videoLink, use that
                     contents.push(element.dataset.videoLink);
@@ -253,24 +251,23 @@ function getCurrentLinksFromCards(container) {
             } else if ((element.classList.contains('text-card') || element.classList.contains('header-card')) && element.dataset.originalText) {
                 contents.push(element.dataset.originalText);
             }
-            
+
             // If this is the last card in a section, add section end tag
             if (element.classList.contains('section-card-last') && inSection) {
                 contents.push('/++');
                 inSection = false;
             }
-        } else if (element.classList.contains('video-title')) {
-            // Handle video title elements
-            if (element.dataset.originalInput) {
-                contents.push(element.dataset.originalInput);
-            }
-        } else {
+        } else if (element.classList.contains('video-title')) { // Bug 1 Fix: Ignore video-title for editor reconstruction
+            // These are for display only in linksContainer.
+            // The originalLink from the associated link-card already has this info.
+            // Do nothing here.
+        } else { // Non-section, non-break, non-video-title elements
             // Regular card (not in a section)
             if (element.classList.contains('link-card')) {
-                // For link cards, prioritize originalInput if available,
+                // For link cards, prioritize originalLink if available,
                 // otherwise construct from videoLink
-                if (element.dataset.originalInput) {
-                    contents.push(element.dataset.originalInput);
+                if (element.dataset.originalLink) { // Bug 1 Fix: Use originalLink
+                    contents.push(element.dataset.originalLink);
                 } else if (element.dataset.videoLink) {
                     // If we don't have originalInput but have videoLink, use that
                     contents.push(element.dataset.videoLink);
@@ -280,14 +277,14 @@ function getCurrentLinksFromCards(container) {
             }
         }
     });
-    
+
     // If we're still in a section at the end, close it
     if (inSection) {
         contents.push('/++');
     }
-    
+
     // For debugging - log the final content array
-    console.log('Final contents for sharing:', contents);
+    console.log('Final contents for editor/sharing:', contents);
     
     return contents;
 }
