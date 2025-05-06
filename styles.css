@@ -507,6 +507,7 @@ button {
 .section-card-middle {
     border-radius: 0 !important;
     border-top: none !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important; /* Slightly more visible separator */
 }
 
 .section-card-last {
@@ -1639,4 +1640,9 @@ html[data-theme="dark"] .ql-toolbar button svg {
 [data-theme="dark"] .spoiler.revealed {
     background-color: #333;
     color: #ddd;
+}
+
+/* Dark mode section card separators */
+[data-theme="dark"] .section-card-middle {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important; /* Slightly more visible separator for dark mode */
 }
