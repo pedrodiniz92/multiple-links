@@ -272,6 +272,26 @@ def create_interface():
         .wrap.svelte-1cl284s {
             background-color: white !important;
         }
+        /* Enhanced checkbox styling - visible when checked */
+        input[type="checkbox"]:checked {
+            background-color: #2563eb !important;
+            border-color: #2563eb !important;
+            background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e") !important;
+            background-size: 100% 100% !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+        }
+        input[type="checkbox"] {
+            width: 18px !important;
+            height: 18px !important;
+            border: 2px solid #cbd5e1 !important;
+            border-radius: 4px !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+        input[type="checkbox"]:hover {
+            border-color: #2563eb !important;
+        }
         /* Make file upload single line */
         .file-preview {
             flex-direction: row !important;
@@ -466,7 +486,7 @@ def create_interface():
                     info="Higher = faster but uses more VRAM"
                 )
 
-                save_prefs_btn = gr.Button("💾 Save Settings", variant="primary")
+                save_prefs_btn = gr.Button("Save Settings", variant="primary")
                 prefs_status = gr.Markdown("")
 
                 save_prefs_btn.click(
