@@ -1,28 +1,118 @@
-Pull likely names of people from video and description. And them after the title "Speaker Relabeling", in italics.
+✅ DONE - Plan mode - Don't change code, suggest what to do on an .md file.
+✅ DONE - Proper Noun Corrections - Implemented Option 3 (Hybrid Approach) with heuristic filters + LLM validation. False positives reduced from 11 to 2 candidates (82% reduction). See IMPLEMENTATION_SUMMARY.md for details.
+Currently, I’ve been working with
+PS C:\Users\pedro> ollama list
+NAME                           ID              SIZE      MODIFIED
+llama3.2:3b                    a80c4f17acd5    2.0 GB    8 hours ago
+llama3.1:8b                    46e0c10c039e    4.9 GB    8 hours ago
+qwen2.5:32b-instruct-q3_K_M    44bd723cfd42    15 GB     14 hours ago
+gpt-oss:120b-cloud             569662207105    -         15 hours ago
+gemma3:12b                     f4031aab637d    8.1 GB    32 hours ago
+gpt-oss:20b                    aa4295ac10c3    13 GB     33 hours ago
+deepseek-r1:8b                 6995872bfe4c    5.2 GB    33 hours ago
+qwen3:8b                       500a1f067a9f    5.2 GB    33 hours ago
 
-# Example:
-Title: Does the Future Belong to China? | Interesting Times with Ross Douthat
-Description: Subscribe to the podcast @InterestingTimesNYT for more episodes like this. 
-Is the United States still a worthy opponent for China? In this episode, Ross Douthat talks to Dan Wang, the author of “Breakneck: China’s Quest to Engineer the Future,” about the alarming speed at which China is able to build and could blow America out of the water.
+I’m also open to solutions that don’t necessarily take LLMs into the loop.
 
-01:08 - “A life full of ease and beauty”
-05:16 - Rule by engineers
-10:34 - China’s Technological Mastery
-15:36 - Is autocracy driving innovation?
-24:44 - What are the real stakes of the competition?
-35:14 - How could China fail? 
-51:29 - Advice for America
-
-Thoughts? Email us at interestingtimes@nytimes.com. 
-
-Read the full transcript here: https://www.nytimes.com/2025/09/04/op...
-
-Unlock full access to New York Times podcasts and explore everything from politics to pop culture. Subscribe today at nytimes.com/podcasts or on Apple Podcasts and Spotify.
-
-# What I expect
-
-"Speaker Relabeling – *Ross Douthat, Dan Wang*", in italics.
-Also, Under the "new name" column, where I can enter names for speaker tags:
-1. Keep the 'enter name...' input as-is
-2. Add a dropdown I can click to pick between "Ross Douthat" and "Dan Wang", in this case. Whatever i pick should be fed into the input (which will still remain editable).
-I don't know whether to use spacy / nlp or ai to figure out which words may be names. What do you suggest?
+Apply?	Original	Suggested	Occurrences	Confidence	Context	Delete
+	American	
+America
+20	High	
+[00:00:55] ...and how it compares to the American model, strengths, weaknesses, conflict, coexistence. But...
+[00:04:16] ...far better infrastructure than the richest American states. That's right. The cities in...
+[00:09:49] ...kinds of breakthroughs, right? But the American assumption is that when capitalism goes...
+Delete
+	New York	
+New York Times
+9	High	
+[00:02:28] ...would say much more functional than New York City. But I was feeling a...
+[00:03:03] ...places in the United States like New York State or California. And so, throughout...
+[00:04:16] ...was basically like being in the New York of China and finding it more...
+Delete
+	Dan Wong	
+Dan Wang
+3	High	
+[00:00:38] ...to remain the world's leading power. Dan Wong is a research fellow at Stanford's...
+[00:00:48] ...China's Quest to Engineer the Future. Dan Wong , welcome to Interesting Times. Thank...
+[01:02:57] ...improves. I'm afraid that's the case. Dan Wong , thank you so much for...
+Delete
+	Russia	
+Ross
+2	High	
+[00:14:40] ...autocratic than China today, namely Stalin's Russia , Stalin's Soviet Union, as well...
+[00:25:48] ...to Ukraine in its self-defense against Russia , the U.S. Hasn't really been...
+Delete
+	Russ	
+Ross
+1	High	
+[00:00:51] ...Times. Thank you for having me, Russ . You're very welcome. Thank you...
+Delete
+	As	
+States
+78	Suggested by llama-3b (ambiguous)	
+[00:05:47] ...States? My framing of China is as an engineering state because since the...
+[00:05:47] ...of engineers into China's leadership really as a corrective to the mayhem of...
+[00:07:29] ...very intent on treating the economy as if it were a vast hydraulic...
+Delete
+	Engineers	
+Engineer
+16	Suggested by llama-3b	
+[00:05:26] ...that China is a society of engineers , It's ruled by engineers, the...
+[00:05:26] ...society of engineers, It's ruled by engineers , the Communist Party is filled...
+[00:05:26] ...the Communist Party is filled with engineers , and America is a society...
+Delete
+	Doesn	
+Does
+10	High	
+[00:05:15] ...So China builds and the US doesn 't. And one of your arguments...
+[00:07:16] ...that means is that the U.S. Doesn 't have functional infrastructure almost anywhere,...
+[00:07:16] ...I would say, and it also doesn 't have these stupid ideas like...
+Delete
+	He	
+How
+9	Suggested by llama-3b	
+[00:00:00] ...The game goes to he who outlasts the adversary. And what...
+[00:06:01] ...Mao years. Mao was a romantic, he was a poet who inflicted all...
+[00:08:05] ...could be pushed around as well. He engineered a property crackdown to reduce...
+Delete
+	Americans	
+America
+6	Suggested by llama-3b	
+[00:17:19] ...such that the Germans and the Americans barely have a very strong solar...
+[00:17:56] ...climbing these ladders in which the Americans have placed. So, Linda, let's just...
+[00:22:53] ...and they were going to have Americans help them. But, so to speak,...
+Delete
+	Though	
+Thoughts
+3	Suggested by llama-3b	
+[00:43:33] ...is still overwhelmingly positive for China. Though you have these bridges to nowhere,...
+[00:47:34] ...out of that, right? So even though things fade into the past, the...
+[00:54:24] ...than tailwinds. And you don't think though that China fears at this point...
+Delete
+	Tries	
+Times
+1	Suggested by llama-3b	
+[00:29:28] ...any scenario in which the U.S. Tries to invade and incur into mainland...
+Delete
+	Hawaii	
+How
+1	Suggested by llama-3b	
+[00:28:54] ...something like seize Guam or seize Hawaii , then I think it is...
+Delete
+	Its	
+Is
+23	Suggested by llama-3b	
+[00:01:43] ...of 2021, China had closed off its borders to COVID when I was...
+[00:04:09] ...was just building a lot in its equivalent of a South Dakota or...
+[00:07:05] ...an engineering state trying to build its way out of every problem. The...
+Delete
+	New York City	
+New York Times
+1	Suggested by llama-3b	
+[00:02:28] ...would say much more functional than New York City . But I was feeling a...
+Delete
+	New York State	
+New York Times
+1	Suggested by llama-3b	
+[00:03:03] ...places in the United States like New York State or California. And so, throughout this...
+Delete

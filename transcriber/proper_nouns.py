@@ -16,6 +16,30 @@ try:
 except ImportError:
     PROPER_NOUN_CORRECTION_AVAILABLE = False
 
+# Simple English word list (common words to filter out)
+# Using a minimal set for now - can be expanded
+COMMON_ENGLISH_WORDS = {
+    "the", "be", "to", "of", "and", "a", "in", "that", "have", "i",
+    "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
+    "this", "but", "his", "by", "from", "they", "we", "say", "her", "she",
+    "or", "an", "will", "my", "one", "all", "would", "there", "their",
+    "what", "so", "up", "out", "if", "about", "who", "get", "which", "go",
+    "me", "when", "make", "can", "like", "time", "no", "just", "him", "know",
+    "take", "people", "into", "year", "your", "good", "some", "could", "them",
+    "see", "other", "than", "then", "now", "look", "only", "come", "its", "over",
+    "think", "also", "back", "after", "use", "two", "how", "our", "work",
+    "first", "well", "way", "even", "new", "want", "because", "any", "these",
+    "give", "day", "most", "us", "is", "was", "are", "been", "has", "had",
+    "were", "said", "did", "having", "may", "should", "does", "am",
+    # Add more common words that appear in the false positives
+    "american", "americans", "america", "engineers", "engineer", "though", "thoughts",
+    "tries", "hawaii", "its", "doesn", "doesn't", "russia", "new", "york",
+    "city", "state", "times", "ross",
+}
+
+# Contractions that should never be "corrected"
+CONTRACTIONS_PATTERN = re.compile(r"\b\w+n't\b|\b\w+'s\b|\b\w+'re\b|\b\w+'ve\b|\b\w+'ll\b|\b\w+'d\b", re.IGNORECASE)
+
 # Alias/normalization map for common brand/entity variants
 PROPER_NOUN_ALIASES = {
     "jp morgan": "JPMorgan",
@@ -192,6 +216,114 @@ def check_alias_map(text: str) -> str:
         if normalized == alias:
             return canonical
     return text
+
+
+def is_common_word(word: str) -> bool:
+    """Check if word is a common English word that shouldn't be corrected."""
+    word_lower = word.lower().strip()
+
+    # Check against our word list
+    if word_lower in COMMON_ENGLISH_WORDS:
+        return True
+
+    # Check if it's a contraction
+    if CONTRACTIONS_PATTERN.match(word):
+        return True
+
+    # Use spacy's vocabulary if available
+    if PROPER_NOUN_CORRECTION_AVAILABLE:
+        nlp_model = get_nlp_model()
+        if nlp_model:
+            # Check if word exists in spacy's vocabulary and is lowercase
+            # (proper nouns are typically capitalized)
+            doc = nlp_model(word_lower)
+            if len(doc) == 1:
+                token = doc[0]
+                # If it's a common POS tag (not proper noun), filter it out
+                if token.pos_ in ['PRON', 'DET', 'ADP', 'CCONJ', 'SCONJ', 'AUX', 'PART']:
+                    return True
+
+    return False
+
+
+def passes_phonetic_similarity(original: str, suggested: str, threshold: int = 3) -> bool:
+    """
+    Check if two words are phonetically similar enough to be a transcription error.
+    Uses edit distance on the original strings.
+    """
+    if not PROPER_NOUN_CORRECTION_AVAILABLE:
+        return True  # Skip filter if tools not available
+
+    # Normalize
+    orig_norm = normalize_for_comparison(original)
+    sugg_norm = normalize_for_comparison(suggested)
+
+    # Calculate Levenshtein distance
+    from rapidfuzz import distance
+    edit_dist = distance.Levenshtein.distance(orig_norm, sugg_norm)
+
+    # Allow threshold edits (insertions/deletions/substitutions)
+    return edit_dist <= threshold
+
+
+def apply_heuristic_filters(corrections: list) -> list:
+    """
+    Apply heuristic filters to reduce false positives.
+
+    Args:
+        corrections: List of correction dicts from find_proper_noun_corrections
+
+    Returns:
+        Filtered list of corrections
+    """
+    filtered = []
+
+    for correction in corrections:
+        original = correction['original']
+        suggested = correction['suggested']
+
+        # Filter 1: Skip if original is a common English word
+        # UNLESS suggested is a known proper noun (higher confidence)
+        if is_common_word(original):
+            # Check if suggested is ALSO a common word - if so, definitely skip
+            if is_common_word(suggested):
+                print(f"  🔍 FILTERED: '{original}' → '{suggested}' (both common words)")
+                continue
+            # If original is common but suggested might be proper noun, keep only high confidence
+            if correction['confidence'] != 'high':
+                print(f"  🔍 FILTERED: '{original}' → '{suggested}' (original is common word, low confidence)")
+                continue
+
+        # Filter 2: Check phonetic similarity
+        if not passes_phonetic_similarity(original, suggested, threshold=3):
+            print(f"  🔍 FILTERED: '{original}' → '{suggested}' (not phonetically similar)")
+            continue
+
+        # Filter 3: Check if original looks like a multi-word proper noun that's already correct
+        # e.g., "New York State" shouldn't be corrected to "New York Times"
+        orig_words = original.split()
+        sugg_words = suggested.split()
+        if len(orig_words) > 1 and len(sugg_words) > 1:
+            # If they differ in word count, likely wrong
+            if len(orig_words) != len(sugg_words):
+                print(f"  🔍 FILTERED: '{original}' → '{suggested}' (multi-word count mismatch)")
+                continue
+
+        # Filter 4: Additional check - if suggesting to add words to an already multi-word phrase
+        # e.g., "New York" → "New York Times" (adding "Times")
+        if len(orig_words) >= 2 and len(sugg_words) > len(orig_words):
+            # Check if original is a subset of suggested
+            # This usually means we're adding words, which is suspicious
+            orig_lower = [w.lower() for w in orig_words]
+            sugg_lower = [w.lower() for w in sugg_words]
+            if all(w in sugg_lower for w in orig_lower):
+                print(f"  🔍 FILTERED: '{original}' → '{suggested}' (adding words to existing phrase)")
+                continue
+
+        # Passed all filters
+        filtered.append(correction)
+
+    return filtered
 
 
 def find_proper_noun_corrections(transcript_text: str, title: str, description: str, rows=None) -> list:
@@ -443,4 +575,10 @@ def find_proper_noun_corrections(transcript_text: str, title: str, description: 
     confidence_order = {'high': 3, 'medium': 2, 'low': 1, 'none': 0}
     result.sort(key=lambda x: (confidence_order[x['confidence']], x['occurrences']), reverse=True)
 
-    return result
+    # Apply heuristic filters to reduce false positives
+    print(f"\n  🔍 Applying heuristic filters to {len(result)} candidates...")
+    filtered_result = apply_heuristic_filters(result)
+    print(f"  ✓ After heuristic filtering: {len(filtered_result)} candidates remain")
+    print(f"     (Note: LLM validation will run separately if enabled)\n")
+
+    return filtered_result
