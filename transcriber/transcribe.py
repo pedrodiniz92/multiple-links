@@ -873,7 +873,7 @@ def transcribe_file(model_manager, user_input, lang_flag_list, clip_times, enabl
 
     with tqdm(total=100, desc="Building HTML", ncols=100, file=sys.__stdout__) as pbar:
         video_url_param = strip_t_param(url) if url else None
-        html_text = build_html(merged_rows, video_url_param, f"{title}", hour_mode, audio_file=audio_file_name, corrections=corrections)
+        html_text = build_html(merged_rows, video_url_param, f"{title}", hour_mode, audio_file=audio_file_name, corrections=corrections, description=description)
         html_out.write_text(html_text, encoding="utf-8")
         pbar.update(100)
 

@@ -8,8 +8,80 @@ import json
 from pathlib import Path
 from utils import html_escape, ms_to_label, add_t
 
+# Try to import spacy for person name extraction
+try:
+    import spacy
+    SPACY_AVAILABLE = True
+    _nlp_cache = None
+except ImportError:
+    SPACY_AVAILABLE = False
 
-def build_html(rows, video_url, title, hour_mode, audio_file=None, corrections=None):
+
+def extract_person_names(text: str) -> list:
+    """
+    Extract person names from text using spacy NER.
+    Returns list of person names found.
+    """
+    if not SPACY_AVAILABLE or not text:
+        return []
+
+    global _nlp_cache
+    if _nlp_cache is None:
+        try:
+            _nlp_cache = spacy.load("en_core_web_sm")
+        except OSError:
+            return []
+
+    doc = _nlp_cache(text)
+    person_names = []
+
+    # Blacklist of words that should never be part of names
+    BLACKLIST_WORDS = {
+        'subscribe', 'click', 'watch', 'listen', 'follow', 'like',
+        'share', 'comment', 'join', 'download', 'visit', 'read',
+        'buy', 'purchase', 'check', 'learn', 'discover', 'explore'
+    }
+
+    # Common single-word false positives (book titles, concepts, etc.)
+    SINGLE_WORD_BLACKLIST = {
+        'breakneck', 'america', 'china', 'united', 'states', 'york',
+        'times', 'podcast', 'episode', 'author', 'book', 'chapter'
+    }
+
+    for ent in doc.ents:
+        if ent.label_ == 'PERSON':
+            # Clean up the name
+            name = ent.text.strip()
+
+            # Skip very short names
+            if len(name) <= 2:
+                continue
+
+            # Split into words and filter out blacklisted words
+            words = name.split()
+            filtered_words = [w for w in words if w.lower() not in BLACKLIST_WORDS]
+
+            # If all words were filtered out, skip
+            if not filtered_words:
+                continue
+
+            # Reconstruct the name
+            clean_name = ' '.join(filtered_words)
+
+            # Skip if single word and in single-word blacklist
+            if len(filtered_words) == 1 and filtered_words[0].lower() in SINGLE_WORD_BLACKLIST:
+                continue
+
+            # Skip if we've already added this name
+            if clean_name in person_names:
+                continue
+
+            person_names.append(clean_name)
+
+    return person_names
+
+
+def build_html(rows, video_url, title, hour_mode, audio_file=None, corrections=None, description=""):
     """Build complete HTML document with transcript, relabeling UI, and correction UI."""
     # Check if diarization was used (any speaker labels present)
     has_speakers = any(speaker for _, _, _, _, speaker in rows)
@@ -81,7 +153,7 @@ def build_html(rows, video_url, title, hour_mode, audio_file=None, corrections=N
 
     # Add relabeling section if speakers exist
     if has_speakers:
-        head += build_relabeling_section(speaker_samples, audio_file, video_url)
+        head += build_relabeling_section(speaker_samples, audio_file, video_url, title, description)
 
     # Add proper noun correction section if corrections exist
     if corrections and len(corrections) > 0:
@@ -121,10 +193,28 @@ def build_html(rows, video_url, title, hour_mode, audio_file=None, corrections=N
     return head + "\n".join(body) + tail
 
 
-def build_relabeling_section(speaker_samples, audio_file, video_url):
-    """Build the speaker relabeling UI section."""
+def build_relabeling_section(speaker_samples, audio_file, video_url, title="", description=""):
+    """Build the speaker relabeling UI section with person name suggestions."""
+    # Extract person names from title and description
+    combined_text = f"{title} {description}".strip()
+    person_names = extract_person_names(combined_text)
+
     html = '<div class="relabel-section" id="relabelSection">\n'
-    html += '<h3>Speaker Relabeling</h3>\n'
+
+    # Add header with person names in italics if found
+    if person_names:
+        names_display = ', '.join(person_names)
+        html += f'<h3>Speaker Relabeling – <em>{html_escape(names_display)}</em></h3>\n'
+    else:
+        html += '<h3>Speaker Relabeling</h3>\n'
+
+    # Add datalist for name suggestions
+    if person_names:
+        html += '<datalist id="personNameSuggestions">\n'
+        for name in person_names:
+            html += f'  <option value="{html_escape(name)}">\n'
+        html += '</datalist>\n'
+
     html += '<table class="relabel-table">\n'
     html += '<tr><th>Speaker Tag</th><th>New Name</th><th>Sample</th></tr>\n'
 
@@ -138,7 +228,10 @@ def build_relabeling_section(speaker_samples, audio_file, video_url):
             timestamp_link = f'<a href="{html_escape(link)}" target="_blank" rel="noopener noreferrer">{html_escape(sample_info["label"])}</a>'
         sample_display = f"[{timestamp_link}] {html_escape(sample_info['sample'])}"
         html += f'<tr><td>{html_escape(speaker)}</td>'
-        html += f'<td><input type="text" id="input-{html_escape(speaker)}" placeholder="Enter name..."></td>'
+
+        # Add list attribute to input if we have person names
+        list_attr = ' list="personNameSuggestions"' if person_names else ''
+        html += f'<td><input type="text" id="input-{html_escape(speaker)}" placeholder="Enter name..."{list_attr}></td>'
         html += f'<td class="relabel-sample">{sample_display}</td></tr>\n'
 
     html += '</table>\n'
@@ -156,9 +249,28 @@ def build_correction_section(corrections, audio_file, video_url, hour_mode):
     """Build the proper noun correction UI section."""
     html = '<div class="correction-section" id="correctionSection">\n'
     html += '<h3>Proper Noun Corrections</h3>\n'
-    html += '<p>Review suggested corrections for proper nouns (detected from title/description):</p>\n'
-    html += '<table class="correction-table">\n'
-    html += '<tr><th style="width:60px;">Apply?</th><th>Original</th><th>Suggested</th><th>Occurrences</th><th>Confidence</th><th>Context</th></tr>\n'
+    html += '<button onclick="showAddCorrectionForm()" style="margin-bottom:12px; padding:6px 12px; cursor:pointer;">+ Add Custom Correction</button>\n'
+
+    # Add custom correction form (hidden by default)
+    html += '<div id="addCorrectionForm" style="display:none; background:#fff; border:1px solid #ccc; padding:12px; margin-bottom:12px; border-radius:4px;">\n'
+    html += '<div style="margin-bottom:8px;"><strong>Add Custom Correction</strong></div>\n'
+    html += '<div style="margin-bottom:8px;">\n'
+    html += '<label style="display:inline-block; width:100px;">Original:</label>\n'
+    html += '<input type="text" id="customOriginal" placeholder="e.g., mark kerr" style="width:250px; padding:4px;">\n'
+    html += '</div>\n'
+    html += '<div style="margin-bottom:8px;">\n'
+    html += '<label style="display:inline-block; width:100px;">Replacement:</label>\n'
+    html += '<input type="text" id="customReplacement" placeholder="e.g., Mark Kerr" style="width:250px; padding:4px;">\n'
+    html += '</div>\n'
+    html += '<div style="margin-bottom:8px;">\n'
+    html += '<label><input type="checkbox" id="customCaseSensitive" checked> Case-sensitive</label>\n'
+    html += '</div>\n'
+    html += '<button onclick="addCustomCorrection()" style="padding:6px 12px; margin-right:8px; cursor:pointer;">Add to Table</button>\n'
+    html += '<button onclick="hideAddCorrectionForm()" style="padding:6px 12px; cursor:pointer;">Cancel</button>\n'
+    html += '</div>\n\n'
+
+    html += '<table class="correction-table" id="correctionsTable">\n'
+    html += '<tr><th style="width:60px;">Apply?</th><th>Original</th><th>Suggested</th><th>Occurrences</th><th>Confidence</th><th>Context</th><th style="width:60px;">Delete</th></tr>\n'
 
     for idx, correction in enumerate(corrections):
         checked = ' checked' if correction['confidence'] == 'high' else ''
@@ -198,19 +310,22 @@ def build_correction_section(corrections, audio_file, video_url, hour_mode):
         if correction.get('ambiguous', False):
             confidence_display += ' <span style="color:#999;">(ambiguous)</span>'
 
-        html += f'<tr>'
+        html += f'<tr id="correction_row_{idx}">'
         html += f'<td style="text-align:center;"><input type="checkbox"{checked} id="fix_{idx}" data-original="{html_escape(correction["original"])}" data-suggested="{html_escape(correction["suggested"])}"></td>'
         html += f'<td>{html_escape(correction["original"])}</td>'
         html += f'<td><input type="text" class="suggested-input" id="suggested_{idx}" value="{html_escape(correction["suggested"])}" data-checkbox-id="fix_{idx}"></td>'
         html += f'<td>{correction["occurrences"]}</td>'
         html += f'<td>{confidence_display}</td>'
         html += f'<td>{context_html}</td>'
+        html += f'<td style="text-align:center;"><button onclick="deleteCorrection({idx})" style="padding:4px 8px; cursor:pointer; background:#f44336; color:white; border:none; border-radius:3px;">Delete</button></td>'
         html += f'</tr>\n'
 
     html += '</table>\n'
     html += '<div class="correction-buttons">\n'
     html += '<button onclick="applyCorrections()">Apply Selected Corrections</button>\n'
     html += '<button onclick="applyHighConfidenceOnly()">Apply High-Confidence Only</button>\n'
+    html += '<button onclick="applyCorrectionsAndSave()">Apply and Save</button>\n'
+    html += '<button onclick="applyCorrectionsAndSaveAs()">Apply and Save as...</button>\n'
     html += '<button onclick="dismissCorrections()">Skip Corrections</button>\n'
     html += '</div>\n'
     html += '</div>\n\n'
@@ -345,9 +460,11 @@ function applyCorrections() {
     if (cb.checked) {
       const idx = cb.id.replace('fix_', '');
       const suggestedInput = document.getElementById('suggested_' + idx);
+      const caseSensitive = cb.getAttribute('data-case-sensitive');
       corrections.push({
         original: cb.getAttribute('data-original'),
-        suggested: suggestedInput ? suggestedInput.value : cb.getAttribute('data-suggested')
+        suggested: suggestedInput ? suggestedInput.value : cb.getAttribute('data-suggested'),
+        caseSensitive: caseSensitive === 'true'
       });
     }
   });
@@ -377,7 +494,10 @@ function applyCorrectionsToTranscript(corrections) {
   const transcriptCells = document.querySelectorAll('table tbody td:not(.ts)');
 
   corrections.forEach(corr => {
-    const regex = new RegExp('\\\\b' + corr.original + '\\\\b', 'gi');
+    // Use case-sensitive flag if provided, otherwise default to case-insensitive
+    const flags = (corr.caseSensitive === true) ? 'g' : 'gi';
+    const escapedOriginal = corr.original.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+    const regex = new RegExp('\\\\b' + escapedOriginal + '\\\\b', flags);
 
     transcriptCells.forEach(cell => {
       if (cell.classList.contains('ts')) return;
@@ -385,6 +505,11 @@ function applyCorrectionsToTranscript(corrections) {
       const originalText = cell.innerHTML;
       const newText = originalText.replace(regex, (match) => {
         const replacement = corr.suggested;
+        // For case-sensitive replacements, use exact replacement
+        if (corr.caseSensitive === true) {
+          return replacement;
+        }
+        // For case-insensitive, preserve capitalization of first letter
         if (match[0] === match[0].toUpperCase()) {
           return replacement[0].toUpperCase() + replacement.slice(1);
         }
@@ -404,6 +529,260 @@ function applyCorrectionsToTranscript(corrections) {
 
 function dismissCorrections() {
   document.getElementById('correctionSection').style.display = 'none';
+}
+
+function applyCorrectionsAndSave() {
+  // Apply corrections
+  const checkboxes = document.querySelectorAll('[id^="fix_"]');
+  const corrections = [];
+
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      const idx = cb.id.replace('fix_', '');
+      const suggestedInput = document.getElementById('suggested_' + idx);
+      const caseSensitive = cb.getAttribute('data-case-sensitive');
+      corrections.push({
+        original: cb.getAttribute('data-original'),
+        suggested: suggestedInput ? suggestedInput.value : cb.getAttribute('data-suggested'),
+        caseSensitive: caseSensitive === 'true'
+      });
+    }
+  });
+
+  if (corrections.length === 0) {
+    document.getElementById('correctionSection').style.display = 'none';
+    return;
+  }
+
+  const transcriptCells = document.querySelectorAll('table tbody td:not(.ts)');
+
+  corrections.forEach(corr => {
+    const flags = (corr.caseSensitive === true) ? 'g' : 'gi';
+    const escapedOriginal = corr.original.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+    const regex = new RegExp('\\\\b' + escapedOriginal + '\\\\b', flags);
+
+    transcriptCells.forEach(cell => {
+      if (cell.classList.contains('ts')) return;
+
+      const originalText = cell.innerHTML;
+      const newText = originalText.replace(regex, (match) => {
+        const replacement = corr.suggested;
+        if (corr.caseSensitive === true) {
+          return replacement;
+        }
+        if (match[0] === match[0].toUpperCase()) {
+          return replacement[0].toUpperCase() + replacement.slice(1);
+        }
+        return replacement;
+      });
+
+      if (newText !== originalText) {
+        cell.innerHTML = newText;
+      }
+    });
+  });
+
+  // Remove correction section
+  const correctionSection = document.getElementById('correctionSection');
+  if (correctionSection) correctionSection.remove();
+
+  // Save file
+  const htmlContent = document.documentElement.outerHTML;
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = document.title + '_corrected.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function applyCorrectionsAndSaveAs() {
+  // Apply corrections
+  const checkboxes = document.querySelectorAll('[id^="fix_"]');
+  const corrections = [];
+
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      const idx = cb.id.replace('fix_', '');
+      const suggestedInput = document.getElementById('suggested_' + idx);
+      const caseSensitive = cb.getAttribute('data-case-sensitive');
+      corrections.push({
+        original: cb.getAttribute('data-original'),
+        suggested: suggestedInput ? suggestedInput.value : cb.getAttribute('data-suggested'),
+        caseSensitive: caseSensitive === 'true'
+      });
+    }
+  });
+
+  if (corrections.length === 0) {
+    document.getElementById('correctionSection').style.display = 'none';
+    return;
+  }
+
+  const transcriptCells = document.querySelectorAll('table tbody td:not(.ts)');
+
+  corrections.forEach(corr => {
+    const flags = (corr.caseSensitive === true) ? 'g' : 'gi';
+    const escapedOriginal = corr.original.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+    const regex = new RegExp('\\\\b' + escapedOriginal + '\\\\b', flags);
+
+    transcriptCells.forEach(cell => {
+      if (cell.classList.contains('ts')) return;
+
+      const originalText = cell.innerHTML;
+      const newText = originalText.replace(regex, (match) => {
+        const replacement = corr.suggested;
+        if (corr.caseSensitive === true) {
+          return replacement;
+        }
+        if (match[0] === match[0].toUpperCase()) {
+          return replacement[0].toUpperCase() + replacement.slice(1);
+        }
+        return replacement;
+      });
+
+      if (newText !== originalText) {
+        cell.innerHTML = newText;
+      }
+    });
+  });
+
+  // Remove correction section
+  const correctionSection = document.getElementById('correctionSection');
+  if (correctionSection) correctionSection.remove();
+
+  // Save file with dialog
+  const htmlContent = document.documentElement.outerHTML;
+
+  try {
+    const opts = {
+      suggestedName: document.title + '_corrected.html',
+      types: [{ description: 'HTML Files', accept: { 'text/html': ['.html'] } }]
+    };
+    const handle = await window.showSaveFilePicker(opts);
+    const writable = await handle.createWritable();
+    await writable.write(htmlContent);
+    await writable.close();
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('Save failed:', err);
+      alert('Save as... not supported in this browser. File will be saved to Downloads folder instead.');
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = document.title + '_corrected.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }
+}
+
+function showAddCorrectionForm() {
+  document.getElementById('addCorrectionForm').style.display = 'block';
+}
+
+function hideAddCorrectionForm() {
+  document.getElementById('addCorrectionForm').style.display = 'none';
+  // Clear form fields
+  document.getElementById('customOriginal').value = '';
+  document.getElementById('customReplacement').value = '';
+  document.getElementById('customCaseSensitive').checked = true;
+}
+
+function addCustomCorrection() {
+  const original = document.getElementById('customOriginal').value.trim();
+  const replacement = document.getElementById('customReplacement').value.trim();
+  const caseSensitive = document.getElementById('customCaseSensitive').checked;
+
+  if (!original || !replacement) {
+    alert('Please enter both original and replacement text.');
+    return;
+  }
+
+  // Count occurrences in the transcript
+  const transcriptCells = document.querySelectorAll('table tbody td:not(.ts)');
+  let occurrences = 0;
+  const contexts = [];
+
+  transcriptCells.forEach(cell => {
+    if (cell.classList.contains('ts')) return;
+
+    const text = cell.textContent;
+    const flags = caseSensitive ? 'g' : 'gi';
+    const regex = new RegExp('\\\\b' + original.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') + '\\\\b', flags);
+    const matches = text.match(regex);
+
+    if (matches) {
+      occurrences += matches.length;
+
+      // Extract context (first occurrence only)
+      if (contexts.length < 3) {
+        const words = text.split(' ');
+        const matchIndex = words.findIndex(word => regex.test(word));
+        if (matchIndex !== -1) {
+          const start = Math.max(0, matchIndex - 6);
+          const end = Math.min(words.length, matchIndex + 7);
+          const contextWords = words.slice(start, end);
+          const context = (start > 0 ? '...' : '') + contextWords.join(' ') + (end < words.length ? '...' : '');
+          contexts.push(context);
+        }
+      }
+    }
+  });
+
+  if (occurrences === 0) {
+    alert('No occurrences of "' + original + '" found in the transcript.');
+    return;
+  }
+
+  // Get current number of rows to generate unique IDs
+  const table = document.getElementById('correctionsTable');
+  const rowCount = table.rows.length - 1; // Subtract header row
+  const newIdx = rowCount;
+
+  // Create context HTML
+  let contextHtml = '';
+  contexts.forEach(ctx => {
+    contextHtml += '<div class="context-snippet">' + escapeHtml(ctx) + '</div>';
+  });
+
+  // Add new row to table
+  const newRow = table.insertRow(-1);
+  newRow.id = 'correction_row_' + newIdx;
+  newRow.innerHTML = `
+    <td style="text-align:center;"><input type="checkbox" checked id="fix_${newIdx}" data-original="${escapeHtml(original)}" data-suggested="${escapeHtml(replacement)}" data-case-sensitive="${caseSensitive}"></td>
+    <td>${escapeHtml(original)}</td>
+    <td><input type="text" class="suggested-input" id="suggested_${newIdx}" value="${escapeHtml(replacement)}" data-checkbox-id="fix_${newIdx}"></td>
+    <td>${occurrences}</td>
+    <td><span class="confidence-high">Custom</span></td>
+    <td>${contextHtml}</td>
+    <td style="text-align:center;"><button onclick="deleteCorrection(${newIdx})" style="padding:4px 8px; cursor:pointer; background:#f44336; color:white; border:none; border-radius:3px;">Delete</button></td>
+  `;
+
+  // Hide and reset form
+  hideAddCorrectionForm();
+
+  // Show success message
+  alert('Custom correction added! Found ' + occurrences + ' occurrence(s). Check the box and click "Apply Selected Corrections" to apply.');
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function deleteCorrection(rowIdx) {
+  const row = document.getElementById('correction_row_' + rowIdx);
+  if (row) {
+    row.remove();
+  }
 }
 """
 
