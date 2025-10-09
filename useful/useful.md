@@ -14,7 +14,7 @@ Next steps and notes - https://docs.google.com/document/d/1UA8CedW5Qqt_5u0W1OmUF
 1. Stage all changes (new, modified, deleted)
 2. Commit the staged changes locally with a message
 3. Push the local commits to the remote repository (usually origin/main)
-git add -A && git commit -m "transcriber - GUI working alright, stable" && git push origin main
+git add -A && git commit -m "transcriber - GUI working alright, hamburger menu works" && git push origin main
 
 # Project Filetree
 ```

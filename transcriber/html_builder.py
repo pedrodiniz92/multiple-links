@@ -136,8 +136,98 @@ def build_html(rows, video_url, title, hour_mode, audio_file=None, corrections=N
   .correction-buttons button {{ padding:8px 16px; margin-right:8px; font-size:11pt; cursor:pointer; }}
   .correction-buttons button:hover {{ opacity:0.8; }}
   .highlight-change {{ background-color:yellow; transition:background-color 2s; }}
+  /* --- Hamburger menu --- */
+  #navHamburger {{
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 99999;
+    cursor: pointer;
+    font-weight: 600;
+    background: white;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 16px;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+  }}
+  #navHamburger:hover {{
+    background: #f3f4f6;
+    color: #1565c0;
+    border-color: #1565c0;
+  }}
+
+  #appMenu {{
+    position: fixed;
+    top: 52px;
+    right: 12px;
+    z-index: 99998;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 200px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    font-family: Arial, sans-serif;
+  }}
+
+  #appMenu.collapsed {{
+    display: none;
+  }}
+
+  #appMenu button.nav-btn {{
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    width: 100%;
+  }}
+  #appMenu button.nav-btn:hover {{
+    background: #eff6ff;
+    border-color: #1565c0;
+    color: #1565c0;
+  }}
+  #appMenu button.nav-btn:active {{
+    background: #dbeafe;
+    border-color: #1e40af;
+    color: #1e40af;
+  }}
+
+  /* --- Editable transcript cells --- */
+  td[contenteditable="true"] {{
+    background-color: #fffbeb;
+    outline: 1px solid #fbbf24;
+    cursor: text;
+  }}
+  td[contenteditable="true"]:focus {{
+    background-color: #fef3c7;
+    outline: 2px solid #f59e0b;
+  }}
 </style>
 </head><body>
+<button id="navHamburger" title="Toggle menu" onclick="toggleNavbar()">☰</button>
+<div id="appMenu" class="collapsed">
+  <button class="nav-btn" onclick="saveHTML()">Save</button>
+  <button class="nav-btn" onclick="saveHTMLAs()">Save as…</button>
+  <button class="nav-btn" onclick="openAddCorrectionDialog()">+ Add custom correction</button>
+  <button class="nav-btn" id="editTranscriptBtn" onclick="toggleEditMode()">Edit Transcript</button>
+</div>
 <div class="title">{html_escape(title)}{' - <a href="' + html_escape(video_url) + '" target="_blank" rel="noopener noreferrer">link</a>' if video_url else ''}</div>
 """
 
@@ -239,7 +329,7 @@ def build_relabeling_section(speaker_samples, audio_file, video_url, title="", d
     html += '<button onclick="applyRelabeling()">Apply Relabeling</button>\n'
     html += '<button onclick="applyAndSave()">Apply and Save</button>\n'
     html += '<button onclick="applyAndSaveAs()">Apply and Save as...</button>\n'
-    html += '<button onclick="dismissRelabeling()">Dismiss</button>\n'
+    html += '<button onclick="dismissRelabeling()">Close</button>\n'
     html += '</div>\n'
     html += '</div>\n\n'
     return html
@@ -323,10 +413,9 @@ def build_correction_section(corrections, audio_file, video_url, hour_mode):
     html += '</table>\n'
     html += '<div class="correction-buttons">\n'
     html += '<button onclick="applyCorrections()">Apply Selected Corrections</button>\n'
-    html += '<button onclick="applyHighConfidenceOnly()">Apply High-Confidence Only</button>\n'
     html += '<button onclick="applyCorrectionsAndSave()">Apply and Save</button>\n'
     html += '<button onclick="applyCorrectionsAndSaveAs()">Apply and Save as...</button>\n'
-    html += '<button onclick="dismissCorrections()">Skip Corrections</button>\n'
+    html += '<button onclick="dismissCorrections()">Close</button>\n'
     html += '</div>\n'
     html += '</div>\n\n'
     return html
@@ -357,8 +446,6 @@ function applyRelabeling() {
       div.textContent = mapping[origSpeaker] + ':';
     }
   });
-
-  document.getElementById('relabelSection').style.display = 'none';
 }
 
 function applyAndSave() {
@@ -523,8 +610,6 @@ function applyCorrectionsToTranscript(corrections) {
       }
     });
   });
-
-  document.getElementById('correctionSection').style.display = 'none';
 }
 
 function dismissCorrections() {
@@ -786,10 +871,120 @@ function deleteCorrection(rowIdx) {
 }
 """
 
+    # Add navbar and utility helpers
+    helpers_script = """
+// --- Menu collapse ---
+function toggleNavbar() {
+  const menu = document.getElementById('appMenu');
+  if (menu) menu.classList.toggle('collapsed');
+}
+
+// --- Save current HTML ---
+function saveHTML() {
+  const htmlContent = document.documentElement.outerHTML;
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (document.title || 'transcript') + '.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function saveHTMLAs() {
+  const htmlContent = document.documentElement.outerHTML;
+  try {
+    const handle = await (window.showSaveFilePicker ? window.showSaveFilePicker({
+      suggestedName: (document.title || 'transcript') + '.html',
+      types: [{ description: 'HTML Files', accept: { 'text/html': ['.html'] } }]
+    }) : null);
+    if (handle) {
+      const writable = await handle.createWritable();
+      await writable.write(htmlContent);
+      await writable.close();
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+  }
+  saveHTML();
+}
+
+// --- Apply + Save (Corrections) ---
+function applyCorrectionsAndSave() {
+  if (typeof applyCorrections === 'function') {
+    applyCorrections();
+  } else if (typeof applyCorrectionsToTranscript === 'function') {
+    const selected = (typeof collectSelectedCorrections === 'function') ? collectSelectedCorrections() : null;
+    if (selected) applyCorrectionsToTranscript(selected);
+  }
+  saveHTML();
+}
+
+// --- Apply + Save (Relabeling) ---
+function applyRelabelingAndSave() {
+  if (typeof applyAndSave === 'function') {
+    applyAndSave();
+  } else if (typeof applyRelabeling === 'function') {
+    applyRelabeling();
+    saveHTML();
+  } else {
+    saveHTML();
+  }
+}
+
+// --- Quick "+ Add custom correction" ---
+function openAddCorrectionDialog() {
+  const original = prompt('Original text to replace (word/phrase):');
+  if (!original) return;
+  const suggested = prompt(`Replace "${original}" with:`);
+  if (suggested == null) return;
+  const caseSensitive = confirm('Case-sensitive? OK = yes, Cancel = no');
+
+  const corr = [{ original, suggested, caseSensitive }];
+  if (typeof applyCorrectionsToTranscript === 'function') {
+    applyCorrectionsToTranscript(corr);
+  } else {
+    const flags = caseSensitive ? 'g' : 'gi';
+    const escapedOriginal = original.replace(/[.*+?^${}()|[\\\\]\\\\\\\\]/g, '\\\\\\\\$&');
+    const regex = new RegExp('\\\\\\\\b' + escapedOriginal + '\\\\\\\\b', flags);
+    document.querySelectorAll('table tbody td:not(.ts)').forEach(cell => {
+      const before = cell.innerHTML;
+      const after = before.replace(regex, (m) => {
+        if (caseSensitive) return suggested;
+        if (m[0] === m[0].toUpperCase() && suggested) {
+          return suggested[0].toUpperCase() + suggested.slice(1);
+        }
+        return suggested;
+      });
+      if (after !== before) cell.innerHTML = after;
+    });
+  }
+}
+
+// --- Toggle Edit Mode ---
+let editModeActive = false;
+function toggleEditMode() {
+  const btn = document.getElementById('editTranscriptBtn');
+  const transcriptCells = document.querySelectorAll('table tbody td:not(.ts)');
+
+  editModeActive = !editModeActive;
+
+  transcriptCells.forEach(cell => {
+    cell.contentEditable = editModeActive ? 'true' : 'false';
+  });
+
+  btn.textContent = editModeActive ? 'Done Editing' : 'Edit Transcript';
+}
+
+"""
+
     # Combine scripts
     if has_speakers:
-        js_script += correction_script + "\n</script>\n"
+        js_script += correction_script + helpers_script + "\n</script>\n"
     else:
-        js_script = "<script>\n" + correction_script + "</script>\n"
+        js_script = "<script>\n" + correction_script + helpers_script + "</script>\n"
 
     return js_script
