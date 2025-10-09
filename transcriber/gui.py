@@ -30,22 +30,51 @@ prefs_manager = PreferencesManager()
 def get_ollama_models():
     """Query Ollama for available models."""
     if not OLLAMA_AVAILABLE:
-        return ["llama3.2:3b", "llama3.2:8b"]  # Fallback defaults
+        return ["llama3.2:3b"]  # Fallback default
 
     try:
         response = ollama.list()
-        models = [model['name'] for model in response.get('models', [])]
+
+        # Debug: print the response structure
+        print(f"🔍 DEBUG: Ollama response type: {type(response)}")
+
+        # Handle different response formats
+        models = []
+
+        # Check if it's a ListResponse object (has .models attribute)
+        if hasattr(response, 'models'):
+            print(f"🔍 DEBUG: Found {len(response.models)} model entries")
+            for model in response.models:
+                # Model objects have a 'name' or 'model' attribute
+                name = getattr(model, 'name', None) or getattr(model, 'model', None)
+                if name:
+                    models.append(name)
+        # Fallback: try as dict
+        elif isinstance(response, dict):
+            model_list = response.get('models', [])
+            for model in model_list:
+                if isinstance(model, dict):
+                    name = model.get('name') or model.get('model') or model.get('id')
+                    if name:
+                        models.append(name)
+                elif isinstance(model, str):
+                    models.append(model)
+
+        print(f"🔍 DEBUG: Extracted model names: {models}")
 
         # Filter for common chat models (exclude embedding models)
         chat_models = [m for m in models if not any(x in m.lower() for x in ['embed', 'nomic'])]
 
         if not chat_models:
+            print("⚠️ No Ollama models found. Using fallback.")
             return ["llama3.2:3b"]  # Fallback if no models found
 
         return sorted(chat_models)
     except Exception as e:
-        print(f"Warning: Could not query Ollama models ({e}), using defaults")
-        return ["llama3.2:3b", "llama3.2:8b"]
+        print(f"⚠️ Could not query Ollama models: {e}")
+        print(f"💡 TIP: Make sure Ollama is running with 'ollama serve'")
+        print(f"💡 TIP: Check installed models with 'ollama list'")
+        return ["llama3.2:3b"]  # Fallback to single default
 
 def load_models_on_startup():
     """Load WhisperX models at GUI startup."""
@@ -318,6 +347,33 @@ def create_interface():
         .file-upload-text br {
             display: none !important;
         }
+        /* Fixed bottom navbar for transcribe button */
+        #transcribe-bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: linear-gradient(to top, rgba(255,255,255,0.98) 85%, rgba(255,255,255,0));
+            backdrop-filter: blur(10px);
+            padding: 20px 0 25px 0;
+            border-top: 1px solid rgba(0,0,0,0.06);
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+        }
+        #transcribe-bottom-bar button {
+            width: 70%;
+            max-width: 280px;
+            margin: 0 auto;
+            display: block;
+            padding: 12px 20px !important;
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            border-radius: 8px !important;
+        }
+        /* Add padding to content so it doesn't get hidden behind fixed bar */
+        #transcribe-tab-content {
+            padding-bottom: 100px;
+        }
         """
     ) as app:
 
@@ -349,97 +405,100 @@ def create_interface():
         with gr.Tabs():
             # Main transcription tab
             with gr.Tab("Transcribe"):
-                with gr.Row():
-                    with gr.Column(scale=1):
-                        # Header aligned with content
-                        gr.HTML("""
-                        <div class="custom-title-container">
-                            <div class="custom-title">Pedro's Transcriber</div>
-                            <div class="custom-description">Transcribe YouTube videos or local audio files with speaker diarization and proper noun correction. (WhisperX, Pyannote)</div>
-                        </div>
-                        """)
+                with gr.Column(elem_id="transcribe-tab-content"):
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            # Header aligned with content
+                            gr.HTML("""
+                            <div class="custom-title-container">
+                                <div class="custom-title">Pedro's Transcriber</div>
+                                <div class="custom-description">Transcribe YouTube videos or local audio files with speaker diarization and proper noun correction. (WhisperX, Pyannote)</div>
+                            </div>
+                            """)
 
-                        gr.Markdown("### Input")
+                            gr.Markdown("### Input")
 
-                        input_source = gr.Textbox(
-                            label="YouTube URL or File Path",
-                            placeholder="https://youtube.com/watch?v=... or /path/to/audio.mp3",
-                            lines=2
-                        )
+                            input_source = gr.Textbox(
+                                label="YouTube URL or File Path",
+                                placeholder="https://youtube.com/watch?v=... or /path/to/audio.mp3",
+                                lines=2
+                            )
 
-                        uploaded_file = gr.File(
-                            label="Or Upload Audio File",
-                            file_types=["audio"],
-                            type="filepath"
-                        )
+                            uploaded_file = gr.File(
+                                label="Or Upload Audio File",
+                                file_types=["audio"],
+                                type="filepath"
+                            )
 
-                        gr.Markdown("### Options")
+                            gr.Markdown("### Options")
 
-                        whisperx_model = gr.Dropdown(
-                            label="WhisperX Model",
-                            choices=["medium", "large-v2", "large-v3"],
-                            value=prefs.get("whisperx_model", "large-v3"),
-                            info="Larger models = better quality but slower"
-                        )
+                            whisperx_model = gr.Dropdown(
+                                label="WhisperX Model",
+                                choices=["medium", "large-v2", "large-v3"],
+                                value=prefs.get("whisperx_model", "large-v3"),
+                                info="Larger models = better quality but slower"
+                            )
 
-                        ollama_model = gr.Dropdown(
-                            label="Ollama Model (for LLM review)",
-                            choices=ollama_models,
-                            value=prefs.get("ollama_model", ollama_models[0]),
-                            info="Used for reviewing uncertain proper noun corrections"
-                        )
+                            ollama_model = gr.Dropdown(
+                                label="Ollama Model (for LLM review)",
+                                choices=ollama_models,
+                                value=prefs.get("ollama_model", ollama_models[0]),
+                                info="Used for reviewing uncertain proper noun corrections"
+                            )
 
-                        language = gr.Dropdown(
-                            label="Language",
-                            choices=["auto", "en", "pt", "pt-BR", "es", "fr", "de", "it", "ja", "zh", "ko"],
-                            value=prefs.get("language", "en"),
-                            info="Audio language (auto = detect automatically)"
-                        )
+                            language = gr.Dropdown(
+                                label="Language",
+                                choices=["auto", "en", "pt", "pt-BR", "es", "fr", "de", "it", "ja", "zh", "ko"],
+                                value=prefs.get("language", "en"),
+                                info="Audio language (auto = detect automatically)"
+                            )
 
-                        scope = gr.Radio(
-                            label="Scope",
-                            choices=[("Whole audio", "whole"), ("Specific clips", "clips")],
-                            value=prefs.get("scope", "whole"),
-                            info="Process entire file or specific time ranges"
-                        )
+                            scope = gr.Radio(
+                                label="Scope",
+                                choices=[("Whole audio", "whole"), ("Specific clips", "clips")],
+                                value=prefs.get("scope", "whole"),
+                                info="Process entire file or specific time ranges"
+                            )
 
-                        clip_data = gr.Textbox(
-                            label="Clip Times (for clips mode)",
-                            placeholder="0:30-1:45, 2:00-3:30 or one per line\nFormat: MM:SS-MM:SS or HH:MM:SS-HH:MM:SS",
-                            lines=3,
-                            visible=(prefs.get("scope") == "clips")
-                        )
+                            clip_data = gr.Textbox(
+                                label="Clip Times (for clips mode)",
+                                placeholder="0:30-1:45, 2:00-3:30 or one per line\nFormat: MM:SS-MM:SS or HH:MM:SS-HH:MM:SS",
+                                lines=3,
+                                visible=(prefs.get("scope") == "clips")
+                            )
 
-                        # Show/hide clip input based on scope
-                        scope.change(
-                            fn=lambda x: gr.update(visible=(x == "clips")),
-                            inputs=[scope],
-                            outputs=[clip_data]
-                        )
+                            # Show/hide clip input based on scope
+                            scope.change(
+                                fn=lambda x: gr.update(visible=(x == "clips")),
+                                inputs=[scope],
+                                outputs=[clip_data]
+                            )
 
-                        diarization = gr.Checkbox(
-                            label="Enable Speaker Diarization",
-                            value=prefs.get("diarization", False),
-                            info="Identify and label different speakers (requires HF_TOKEN in .env)"
-                        )
+                            diarization = gr.Checkbox(
+                                label="Enable Speaker Diarization",
+                                value=prefs.get("diarization", False),
+                                info="Identify and label different speakers (requires HF_TOKEN in .env)"
+                            )
 
+                        with gr.Column(scale=1):
+                            gr.Markdown("### Output")
+
+                            status_text = gr.Markdown(
+                                "Ready to transcribe",
+                                elem_classes=["status-text"]
+                            )
+
+                            output_html = gr.HTML(
+                                "<div style='color: gray;'>Results will appear here...</div>",
+                                elem_classes=["output-box"]
+                            )
+
+                    # Fixed bottom bar with button
+                    with gr.Column(elem_id="transcribe-bottom-bar"):
                         transcribe_btn = gr.Button(
                             "Start Transcription",
                             variant="primary",
                             size="lg"
-                        )
-
-                    with gr.Column(scale=1):
-                        gr.Markdown("### Output")
-
-                        status_text = gr.Markdown(
-                            "Ready to transcribe",
-                            elem_classes=["status-text"]
-                        )
-
-                        output_html = gr.HTML(
-                            "<div style='color: gray;'>Results will appear here...</div>",
-                            elem_classes=["output-box"]
                         )
 
                 # Wire up the transcription

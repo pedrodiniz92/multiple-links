@@ -129,6 +129,21 @@ def review_corrections_with_llm(corrections: list, title: str, description: str,
         print("  ⚠️ Ollama not available, skipping LLM review")
         return corrections
 
+    # Debug: Check if Ollama is running and list available models
+    print(f"\n  🔍 DEBUG: Checking Ollama connection...")
+    try:
+        available_models = ollama.list()
+        print(f"  🔍 DEBUG: Ollama is running. Available models:")
+        for model in available_models.get('models', []):
+            model_name = model.get('name', 'unknown')
+            print(f"      - {model_name}")
+        print(f"  🔍 DEBUG: Attempting to use model: {OLLAMA_MODEL}")
+    except Exception as e:
+        print(f"  ⚠️ DEBUG: Cannot connect to Ollama: {e}")
+        print(f"  💡 TIP: Make sure Ollama is running with 'ollama serve'")
+        print(f"  💡 TIP: Pull the model with 'ollama pull {OLLAMA_MODEL}'")
+        return corrections
+
     print(f"\n  🤖 Reviewing {sum(1 for c in corrections if c['confidence'] in ['medium', 'low'])} uncertain corrections with {OLLAMA_MODEL}...")
 
     reviewed_corrections = []
@@ -233,6 +248,15 @@ Your response (one word/phrase only):"""
 
         except Exception as e:
             print(f"        ⚠️ LLM review failed: {e}")
+            print(f"        🔍 DEBUG: Error type: {type(e).__name__}")
+            print(f"        🔍 DEBUG: Model requested: {OLLAMA_MODEL}")
+
+            # Check if it's a 404 error (model not found)
+            if "404" in str(e) or "not found" in str(e).lower():
+                print(f"        💡 TIP: Model '{OLLAMA_MODEL}' not found. Try:")
+                print(f"           ollama pull {OLLAMA_MODEL}")
+                print(f"        💡 Or check available models with: ollama list")
+
             # Keep original correction if LLM fails
             reviewed_corrections.append(correction)
 
@@ -806,9 +830,11 @@ def transcribe_file(model_manager, user_input, lang_flag_list, clip_times, enabl
                 start_ms, end_ms, text, vrel, speaker = row
                 words = []
 
-            # Fix Problem 1: Ensure text starts with capital letter
-            if text and text[0].islower():
-                text = text[0].upper() + text[1:]
+            # Fix Problem 1: Ensure text starts with capital letter (100% guaranteed)
+            if text:
+                text = text.lstrip()  # Remove leading whitespace first
+                if text and text[0].islower():
+                    text = text[0].upper() + text[1:]
 
             # Fix Problem 2: Fix mid-sentence capitalization using blacklist
             text = fix_capitalization(text)

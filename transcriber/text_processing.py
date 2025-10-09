@@ -88,14 +88,18 @@ def fix_capitalization(text: str) -> str:
 
     result = []
     for i, word in enumerate(words):
-        # First word: keep as-is (already capitalized in Problem 1 fix)
+        # First word: ensure capitalized (double-check safety)
         if i == 0:
+            if word and word[0].islower():
+                word = word[0].upper() + word[1:]
             result.append(word)
             continue
 
         # Check if previous word ended with sentence punctuation
         if result and result[-1] and result[-1][-1] in '.!?':
-            # Keep capital after sentence end
+            # Ensure capital after sentence end
+            if word and word[0].islower():
+                word = word[0].upper() + word[1:]
             result.append(word)
             continue
 

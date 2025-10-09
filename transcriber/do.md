@@ -1,191 +1,47 @@
-# Goal
-Read the codebase to understand what it does.
-Sometimes I run ‘speaker relabeling’ and ‘proper noun corrections’ by clicking to apply, and then there’s no button to save. Can we make sure we have some sort of “apply and save” and “apply and save as…” if i just clicked “apply” for both of those features?
-Also, sometimes I apply selected corrections, then read the transcript and notice there are more corrections to be made. So I’d like to still keep “+ Add custom correction” even after applying corrections.
-I thought of adding all of these as a navbar, horizontal and up top, that I can click to collapse (retaining a hamburger icon to the far right that I can click to bring back.
-Also, ideally I don’t want anything in the navbar (buttons, icons, text, etc) to be selected if I ctrl + A  
+# Capitalization Issues
 
-# What to do 
-File: html_builder.py
-Do these 4 edits. No other changes.
+## Problem
+1. Proper nouns appearing in lowercase: "china", "united states", "mark kerr", "dan boba"
+2. These aren't shown in "Proper Noun Corrections" section
+3. Need 100% guarantee that transcript cells start with capital letter
 
-1) Add CSS (append inside your existing <style> in <head>)
-/* --- Persistent top navbar --- */
-#appNavbar {
-  position: sticky;
-  top: 0;
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: #0f172a;
-  color: #e2e8f0;
-  border-bottom: 1px solid #334155;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  font-family: Arial, sans-serif;
-}
+## Root Cause
+- Whisper outputs lowercase proper nouns
+- Current `fix_capitalization()` only lowercases blacklisted words, doesn't capitalize proper nouns
+- The first-letter fix exists (line 834-835 in `transcribe.py`) but could be more robust
 
-#appNavbar.collapsed .nav-content { display: none; }
+## Solution Options
 
-#navHamburger {
-  cursor: pointer;
-  font-weight: 800;
-  background: transparent;
-  color: #e2e8f0;
-  border: 1px solid #475569;
-  border-radius: 8px;
-  padding: 6px 10px;
-  margin-left: 8px; /* right-side cosmetic spacing */
-}
+See **CAPITALIZATION_FIX_PLAN.md** for complete details.
 
-#appNavbar button.nav-btn {
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #475569;
-  background: #38bdf8;
-  color: #0b1220;
-  font-weight: 600;
-  cursor: pointer;
-}
-#appNavbar button.nav-btn:hover { filter: brightness(0.95); }
+### Quick Summary:
 
-#appNavbar .spacer { flex: 1 1 auto; }
+**Phase 1: Immediate Fix** ✅
+```python
+# transcribe.py line 834
+if text:
+    text = text.lstrip()  # Handle leading whitespace
+    if text and text[0].islower():
+        text = text[0].upper() + text[1:]
+```
 
-2) Insert Navbar HTML (immediately after <body> open in build_html(...))
-<div id="appNavbar" class="">
-  <div class="nav-content" style="display:flex; gap:8px; align-items:center;">
-    <button class="nav-btn" onclick="saveHTML()">Save</button>
-    <button class="nav-btn" onclick="saveHTMLAs()">Save as…</button>
-    <button class="nav-btn" onclick="applyCorrectionsAndSave()">Apply Corrections + Save</button>
-    <button class="nav-btn" onclick="applyRelabelingAndSave()">Apply Relabeling + Save</button>
-    <button class="nav-btn" onclick="openAddCorrectionDialog()">+ Add custom correction</button>
-  </div>
-  <div class="spacer"></div>
-  <button id="navHamburger" title="Toggle menu">☰</button>
-</div>
+**Phase 2: Add Proper Noun Detection** (RECOMMENDED)
+Enhance `fix_capitalization()` in `text_processing.py` with:
+- Country names dict: china → China
+- Name indicators: "mr smith" → "Mr Smith"
+- Compound names: "united states" → "United States"
 
-3) Add JS Helpers (append inside your existing big <script> block)
-// --- Navbar collapse ---
-(function initNavbar(){
-  const bar = document.getElementById('appNavbar');
-  const ham = document.getElementById('navHamburger');
-  if (!bar || !ham) return;
-  ham.addEventListener('click', () => { bar.classList.toggle('collapsed'); });
-})();
+**Phase 3: LLM Review** (Optional, for ambiguous cases)
+Use Ollama to check context-based capitalization
 
-// --- Save current HTML ---
-function saveHTML() {
-  const htmlContent = document.documentElement.outerHTML;
-  const blob = new Blob([htmlContent], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = (document.title || 'transcript') + '.html';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+## Files to Edit
+1. `transcribe.py` - Line 834 (ensure first capital)
+2. `text_processing.py` - Enhance `fix_capitalization()` function
+3. `transcribe.py` - (Optional) Add LLM review function
 
-async function saveHTMLAs() {
-  const htmlContent = document.documentElement.outerHTML;
-  try {
-    const handle = await (window.showSaveFilePicker ? window.showSaveFilePicker({
-      suggestedName: (document.title || 'transcript') + '.html',
-      types: [{ description: 'HTML Files', accept: { 'text/html': ['.html'] } }]
-    }) : null);
-    if (handle) {
-      const writable = await handle.createWritable();
-      await writable.write(htmlContent);
-      await writable.close();
-      return;
-    }
-  } catch (e) {
-    if (e && e.name === 'AbortError') return;
-  }
-  saveHTML();
-}
+## Why They're Not in "Proper Noun Corrections"
+The proper noun correction system looks for:
+- Capitalized phrases in title/description
+- Lowercase versions in transcript
 
-// --- Apply + Save (Corrections) ---
-function applyCorrectionsAndSave() {
-  if (typeof applyCorrections === 'function') {
-    applyCorrections();
-  } else if (typeof applyCorrectionsToTranscript === 'function') {
-    const selected = (typeof collectSelectedCorrections === 'function') ? collectSelectedCorrections() : null;
-    if (selected) applyCorrectionsToTranscript(selected);
-  }
-  saveHTML();
-}
-
-// --- Apply + Save (Relabeling) ---
-function applyRelabelingAndSave() {
-  if (typeof applyAndSave === 'function') {
-    applyAndSave();
-  } else if (typeof applyRelabeling === 'function') {
-    applyRelabeling();
-    saveHTML();
-  } else {
-    saveHTML();
-  }
-}
-
-// --- Quick “+ Add custom correction” ---
-function openAddCorrectionDialog() {
-  const original = prompt('Original text to replace (word/phrase):');
-  if (!original) return;
-  const suggested = prompt(`Replace "${original}" with:`);
-  if (suggested == null) return;
-  const caseSensitive = confirm('Case-sensitive? OK = yes, Cancel = no');
-
-  const corr = [{ original, suggested, caseSensitive }];
-  if (typeof applyCorrectionsToTranscript === 'function') {
-    applyCorrectionsToTranscript(corr);
-  } else {
-    const flags = caseSensitive ? 'g' : 'gi';
-    const escapedOriginal = original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp('\\b' + escapedOriginal + '\\b', flags);
-    document.querySelectorAll('table tbody td:not(.ts)').forEach(cell => {
-      const before = cell.innerHTML;
-      const after = before.replace(regex, (m) => {
-        if (caseSensitive) return suggested;
-        if (m[0] === m[0].toUpperCase() && suggested) {
-          return suggested[0].toUpperCase() + suggested.slice(1);
-        }
-        return suggested;
-      });
-      if (after !== before) cell.innerHTML = after;
-    });
-  }
-}
-
-// --- Keep navbar out of Ctrl+A selection ---
-document.addEventListener('keydown', function(e) {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
-    const table = document.querySelector('table');
-    if (table) {
-      e.preventDefault();
-      const range = document.createRange();
-      range.selectNodeContents(table);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
-  }
-}, true);
-
-4) Stop hiding panels after Apply (search & delete these lines)
-
-In the functions that run on plain “Apply”:
-
-Remove any line that hides corrections:
-
-document.getElementById('correctionSection').style.display = 'none';
-
-
-(Optional) remove any line that hides relabel UI:
-
-document.getElementById('relabelSection').style.display = 'none';
+If Whisper outputs "china" and the title has "China", it should match. If it's not showing up, the matching algorithm might need adjustment in `proper_nouns.py`.
