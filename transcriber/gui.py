@@ -235,10 +235,11 @@ def create_interface():
         .status-text {font-size: 16px; font-weight: bold; margin: 10px 0;}
         .custom-title-container {
             margin-bottom: 20px;
+            margin-left: -10px;
         }
         .custom-title {
             display: inline;
-            font-size: 36px;
+            font-size: 28px;
             font-weight: 600;
         }
         .custom-subtitle {
@@ -253,7 +254,7 @@ def create_interface():
             color: #555;
             font-size: 14px;
         }
-        /* Remove blue background from inputs */
+        /* Remove blue background from inputs and labels */
         .gradio-container input,
         .gradio-container textarea,
         .gradio-container select {
@@ -262,8 +263,68 @@ def create_interface():
         .gr-box {
             background-color: white !important;
         }
+        /* Remove blue background from label text only (not toggles/buttons) */
+        span.svelte-g2oxp3:not(.has-info) {
+            background-color: transparent !important;
+            background: none !important;
+        }
+        /* Keep input/textarea/select backgrounds white */
+        .wrap.svelte-1cl284s {
+            background-color: white !important;
+        }
+        /* Make file upload single line */
+        .file-preview {
+            flex-direction: row !important;
+        }
+        .file-preview-holder {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+        }
+        .upload-text, .file-preview span {
+            display: inline !important;
+            white-space: nowrap !important;
+        }
+        /* More aggressive single line for upload button */
+        [role="button"] span, .upload-container span {
+            display: inline !important;
+        }
+        .upload-container br, .file-upload br {
+            display: none !important;
+        }
+        /* Target Gradio's file component text specifically */
+        .file.svelte-116rqfv br,
+        [data-testid="file"] br,
+        .file-upload-text br {
+            display: none !important;
+        }
         """
     ) as app:
+
+        # Add JavaScript to fix file upload text
+        gr.HTML("""
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fix file upload text to single line
+            function fixUploadText() {
+                const uploads = document.querySelectorAll('[data-testid="file"], .file-upload, .upload-container');
+                uploads.forEach(upload => {
+                    const spans = upload.querySelectorAll('span');
+                    spans.forEach(span => {
+                        if (span.innerHTML.includes('<br>')) {
+                            span.innerHTML = span.innerHTML.replace(/<br\s*\/?>/gi, ' - ');
+                        }
+                    });
+                });
+            }
+
+            // Run immediately and after mutations
+            fixUploadText();
+            const observer = new MutationObserver(fixUploadText);
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
+        </script>
+        """)
 
         with gr.Tabs():
             # Main transcription tab
@@ -274,8 +335,7 @@ def create_interface():
                         gr.HTML("""
                         <div class="custom-title-container">
                             <div class="custom-title">Pedro's Transcriber</div>
-                            <div class="custom-subtitle">(WhisperX, Pyannote)</div>
-                            <div class="custom-description">Transcribe YouTube videos or local audio files with speaker diarization and proper noun correction.</div>
+                            <div class="custom-description">Transcribe YouTube videos or local audio files with speaker diarization and proper noun correction. (WhisperX, Pyannote)</div>
                         </div>
                         """)
 
@@ -344,7 +404,7 @@ def create_interface():
                         )
 
                         transcribe_btn = gr.Button(
-                            "🎬 Start Transcription",
+                            "Start Transcription",
                             variant="primary",
                             size="lg"
                         )
