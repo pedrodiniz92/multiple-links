@@ -5,6 +5,7 @@ Provides a modern web interface for transcription with persistent preferences.
 import os
 import sys
 import time
+import threading
 import gradio as gr
 from pathlib import Path
 from datetime import datetime
@@ -27,6 +28,15 @@ except ImportError:
 model_manager = None
 prefs_manager = PreferencesManager()
 
+# Loading state tracking
+model_loading_status = {
+    "is_loading": True,
+    "is_complete": False,
+    "progress": 0,
+    "message": "Initializing...",
+    "error": None
+}
+
 def get_ollama_models():
     """Query Ollama for available models."""
     if not OLLAMA_AVAILABLE:
@@ -36,14 +46,14 @@ def get_ollama_models():
         response = ollama.list()
 
         # Debug: print the response structure
-        print(f"🔍 DEBUG: Ollama response type: {type(response)}")
+        print(f"DEBUG: Ollama response type: {type(response)}")
 
         # Handle different response formats
         models = []
 
         # Check if it's a ListResponse object (has .models attribute)
         if hasattr(response, 'models'):
-            print(f"🔍 DEBUG: Found {len(response.models)} model entries")
+            print(f"DEBUG: Found {len(response.models)} model entries")
             for model in response.models:
                 # Model objects have a 'name' or 'model' attribute
                 name = getattr(model, 'name', None) or getattr(model, 'model', None)
@@ -60,32 +70,88 @@ def get_ollama_models():
                 elif isinstance(model, str):
                     models.append(model)
 
-        print(f"🔍 DEBUG: Extracted model names: {models}")
+        print(f"DEBUG: Extracted model names: {models}")
 
         # Filter for common chat models (exclude embedding models)
         chat_models = [m for m in models if not any(x in m.lower() for x in ['embed', 'nomic'])]
 
         if not chat_models:
-            print("⚠️ No Ollama models found. Using fallback.")
+            print("WARNING: No Ollama models found. Using fallback.")
             return ["llama3.2:3b"]  # Fallback if no models found
 
         return sorted(chat_models)
     except Exception as e:
-        print(f"⚠️ Could not query Ollama models: {e}")
-        print(f"💡 TIP: Make sure Ollama is running with 'ollama serve'")
-        print(f"💡 TIP: Check installed models with 'ollama list'")
+        print(f"WARNING: Could not query Ollama models: {e}")
+        print(f"TIP: Make sure Ollama is running with 'ollama serve'")
+        print(f"TIP: Check installed models with 'ollama list'")
         return ["llama3.2:3b"]  # Fallback to single default
 
 def load_models_on_startup():
     """Load WhisperX models at GUI startup."""
-    global model_manager
+    global model_manager, model_loading_status
 
-    if model_manager is None:
-        model_manager = ModelManager()
+    try:
+        model_loading_status["progress"] = 10
+        model_loading_status["message"] = "Loading WhisperX models..."
+
+        if model_manager is None:
+            model_manager = ModelManager()
+
+        model_loading_status["progress"] = 50
+        model_loading_status["message"] = "Loading transcription model..."
+
         # Load transcription model (alignment models loaded on-demand per language)
         model_manager.load_transcribe_model()
 
-    return "✓ Models loaded and ready"
+        model_loading_status["progress"] = 100
+        model_loading_status["message"] = "Models loaded successfully!"
+        model_loading_status["is_loading"] = False
+        model_loading_status["is_complete"] = True
+
+    except Exception as e:
+        model_loading_status["is_loading"] = False
+        model_loading_status["error"] = str(e)
+        model_loading_status["message"] = f"Error loading models: {str(e)}"
+
+    return "Models loaded and ready"
+
+def get_loading_status():
+    """Get current loading status for UI updates."""
+    global model_loading_status
+
+    if model_loading_status["error"]:
+        return (
+            f"<div style='color: red;'>Error: {model_loading_status['error']}</div>",
+            f"<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span> <span style='font-size: 16px; font-weight: normal;'>- Error loading models</span></div>"
+        )
+    elif model_loading_status["is_complete"]:
+        # Show checkmark briefly
+        return (
+            "<div style='color: green; font-size: 18px;'>Models loaded successfully!</div>",
+            "<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span> <span style='font-size: 16px; font-weight: normal;'>- Models ready</span></div>"
+        )
+    elif model_loading_status["is_loading"]:
+        progress = model_loading_status["progress"]
+        message = model_loading_status["message"]
+        # Create a loading bar
+        loading_html = f"""
+        <div style='padding: 20px;'>
+            <div style='color: #2563eb; font-size: 16px; font-weight: 600; margin-bottom: 10px;'>
+                Loading Models...
+            </div>
+            <div style='color: #666; margin-bottom: 15px;'>{message}</div>
+            <div style='background: #e5e7eb; border-radius: 10px; height: 20px; overflow: hidden;'>
+                <div style='background: linear-gradient(90deg, #3b82f6, #2563eb); height: 100%; width: {progress}%; transition: width 0.3s ease;'></div>
+            </div>
+            <div style='color: #888; margin-top: 8px; font-size: 14px;'>{progress}%</div>
+        </div>
+        """
+        return (loading_html, f"<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span> <span style='font-size: 16px; font-weight: normal;'>- Loading... {progress}%</span></div>")
+    else:
+        return (
+            "<div style='color: gray;'>Results will appear here...</div>",
+            "<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span></div>"
+        )
 
 def transcribe_wrapper(
     input_source,
@@ -110,7 +176,7 @@ def transcribe_wrapper(
     elif input_source.strip():
         user_input = input_source.strip()
     else:
-        return "<div style='color: red;'>Error: Please provide a YouTube URL or upload a file</div>", "❌ No input provided"
+        return "<div style='color: red;'>Error: Please provide a YouTube URL or upload a file</div>", "<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span> <span style='font-size: 16px; font-weight: normal;'>- No input provided</span></div>"
 
     # Update preferences with current selections (not input source)
     prefs_manager.update({
@@ -159,10 +225,10 @@ def transcribe_wrapper(
                         if end > start:
                             clip_times.append((start, end))
                     except Exception as e:
-                        return f"<div style='color: red;'>Error parsing clip time '{line}': {e}</div>", "❌ Invalid clip format"
+                        return f"<div style='color: red;'>Error parsing clip time '{line}': {e}</div>", "<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span> <span style='font-size: 16px; font-weight: normal;'>- Invalid clip format</span></div>"
 
     if mode == "2" and not clip_times:
-        return "<div style='color: red;'>Error: Clips mode selected but no valid clips provided</div>", "❌ No clips provided"
+        return "<div style='color: red;'>Error: Clips mode selected but no valid clips provided</div>", "<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span> <span style='font-size: 16px; font-weight: normal;'>- No clips provided</span></div>"
 
     # Load HF_TOKEN from .env (for diarization)
     env_file = OUT_DIR / ".env"
@@ -200,7 +266,7 @@ def transcribe_wrapper(
         )
 
         # Build success HTML
-        result_html = "<div style='color: green; font-size: 18px; margin: 20px 0;'>✅ Transcription complete!</div>"
+        result_html = "<div style='font-size: 18px; font-weight: bold; margin: 20px 0;'>Transcription complete!</div>"
         result_html += f"<div style='margin: 10px 0;'><strong>Title:</strong> {result['title']}</div>"
         result_html += f"<div style='margin: 10px 0;'><strong>Output:</strong> <code>{result['html_path'].name}</code></div>"
         result_html += f"<div style='margin: 10px 0;'><strong>Location:</strong> <code>{result['html_path']}</code></div>"
@@ -211,14 +277,14 @@ def transcribe_wrapper(
             ratio = result['processing_time'] / result['audio_duration']
             result_html += f"<div style='margin: 10px 0;'><strong>Speed:</strong> {ratio:.2f}x realtime</div>"
 
-        return result_html, f"✅ Done in {result['processing_time']:.1f}s"
+        return result_html, f"<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span> <span style='font-size: 16px; font-weight: normal;'>- Done in {result['processing_time']:.1f}s</span></div>"
 
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        error_html = f"<div style='color: red;'><strong>❌ Error:</strong> {str(e)}</div>"
+        error_html = f"<div style='color: red;'><strong>Error:</strong> {str(e)}</div>"
         error_html += f"<details><summary>Stack Trace</summary><pre style='font-size: 11px;'>{error_trace}</pre></details>"
-        return error_html, f"❌ Error: {str(e)}"
+        return error_html, f"<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span> <span style='font-size: 16px; font-weight: normal;'>- Error: {str(e)}</span></div>"
 
 def save_preferences_ui(device, compute_type, batch_size):
     """Save advanced preferences from settings tab."""
@@ -235,9 +301,9 @@ def save_preferences_ui(device, compute_type, batch_size):
         transcribe.COMPUTE_TYPE = compute_type
         transcribe.BATCH_SIZE = int(batch_size)
 
-        return "✓ Preferences saved"
+        return "Preferences saved"
     except Exception as e:
-        return f"❌ Error saving preferences: {e}"
+        return f" Error saving preferences: {e}"
 
 # Build Gradio interface
 def create_interface():
@@ -260,15 +326,19 @@ def create_interface():
         * {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }
-        .output-box {max-height: 600px; overflow-y: auto;}
+        .output-box {max-height: calc(100vh - 250px); overflow-y: auto;}
         .status-text {font-size: 16px; font-weight: bold; margin: 10px 0;}
+        h3 {
+            font-size: 22px !important;
+        }
         .custom-title-container {
+            margin-top: 10px;
             margin-bottom: 20px;
             margin-left: -10px;
         }
         .custom-title {
             display: inline;
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 600;
         }
         .custom-subtitle {
@@ -373,6 +443,34 @@ def create_interface():
         /* Add padding to content so it doesn't get hidden behind fixed bar */
         #transcribe-tab-content {
             padding-bottom: 100px;
+        }
+        /* Kill scroll containers that break sticky */
+        .gradio-container,
+        .gradio-container .tabs,
+        .gradio-container [role="tabpanel"] {
+            overflow: visible !important;
+        }
+        /* Make right column (Output section) sticky */
+        #output-column {
+            position: sticky !important;
+            position: -webkit-sticky !important;
+            top: 20px !important;
+            align-self: flex-start !important;
+            height: fit-content !important;
+            max-height: calc(100vh - 140px) !important;
+            overflow-y: auto !important;
+            z-index: 100 !important;
+            background: none !important;
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        /* Ensure parent row has proper overflow */
+        #transcribe-tab-content .grid {
+            overflow: visible !important;
+        }
+        #transcribe-tab-content > div {
+            overflow: visible !important;
         }
         """
     ) as app:
@@ -481,24 +579,26 @@ def create_interface():
                             )
 
                         with gr.Column(scale=1):
-                            gr.Markdown("### Output")
+                            with gr.Group(elem_id="output-column"):
+                                status_text = gr.HTML(
+                                    "<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span> <span style='font-size: 16px; font-weight: normal;'>- Loading models...</span></div>"
+                                )
 
-                            status_text = gr.Markdown(
-                                "Ready to transcribe",
-                                elem_classes=["status-text"]
-                            )
+                                output_html = gr.HTML(
+                                    "<div style='color: gray;'>Loading models, please wait...</div>",
+                                    elem_classes=["output-box"]
+                                )
 
-                            output_html = gr.HTML(
-                                "<div style='color: gray;'>Results will appear here...</div>",
-                                elem_classes=["output-box"]
-                            )
+                                # Hidden timer for polling loading status
+                                loading_timer = gr.Timer(value=0.5, active=True)
 
                     # Fixed bottom bar with button
                     with gr.Column(elem_id="transcribe-bottom-bar"):
                         transcribe_btn = gr.Button(
                             "Start Transcription",
                             variant="primary",
-                            size="lg"
+                            size="lg",
+                            interactive=False  # Start disabled while loading
                         )
 
                 # Wire up the transcription
@@ -515,6 +615,59 @@ def create_interface():
                         diarization,
                     ],
                     outputs=[output_html, status_text]
+                )
+
+                # Checkmark display state
+                checkmark_shown_at = [None]  # Use list to make it mutable in closure
+
+                def update_loading_status():
+                    """Poll loading status and update UI."""
+                    global model_loading_status
+
+                    # If we're showing checkmark, wait 2 seconds then reset
+                    if checkmark_shown_at[0] is not None:
+                        elapsed = time.time() - checkmark_shown_at[0]
+                        if elapsed >= 2.0:
+                            checkmark_shown_at[0] = None
+                            return (
+                                "<div style='color: gray;'>Results will appear here...</div>",
+                                "<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span></div>",
+                                gr.Timer(active=False),  # Stop timer
+                                gr.Button(interactive=True, variant="primary")  # Enable button
+                            )
+                        else:
+                            # Keep showing checkmark
+                            return (
+                                "<div style='color: green; font-size: 18px;'>Models loaded successfully!</div>",
+                                "<div style='margin: 10px 0;'><span style='font-size: 22px; font-weight: 600;'>Output</span> <span style='font-size: 16px; font-weight: normal;'>- Models ready</span></div>",
+                                gr.Timer(active=True),
+                                gr.Button(interactive=True, variant="primary")  # Enable button
+                            )
+
+                    html, status = get_loading_status()
+
+                    # If loading just completed, mark checkmark time
+                    if model_loading_status["is_complete"] and checkmark_shown_at[0] is None:
+                        checkmark_shown_at[0] = time.time()
+
+                    # Keep timer active if still loading or showing checkmark
+                    timer_active = model_loading_status["is_loading"] or checkmark_shown_at[0] is not None
+
+                    # Button state: disabled (grey) while loading, enabled (blue) when ready
+                    button_enabled = not model_loading_status["is_loading"]
+                    button_variant = "primary" if button_enabled else "secondary"
+
+                    return (
+                        html,
+                        status,
+                        gr.Timer(active=timer_active),
+                        gr.Button(interactive=button_enabled, variant=button_variant)
+                    )
+
+                # Connect timer to update function
+                loading_timer.tick(
+                    fn=update_loading_status,
+                    outputs=[output_html, status_text, loading_timer, transcribe_btn]
                 )
 
             # Settings tab
@@ -615,19 +768,24 @@ def main():
     print("="*60)
     print("WhisperX Transcriber - GUI Mode")
     print("="*60)
-    print("\n📦 Loading models... This may take a minute...")
-
-    # Load models at startup
-    status = load_models_on_startup()
-    print(f"{status}\n")
-
-    print("🌐 Starting web interface...")
+    print("\nStarting web interface...")
+    print("Models will load in the background")
     print("="*60)
 
-    # Create and launch the interface
+    # Create the interface
     app = create_interface()
 
-    # Launch with auto-open in browser
+    # Start loading models in background thread AFTER app is ready
+    def load_in_background():
+        time.sleep(1)  # Give the UI a moment to initialize
+        print("\nLoading models in background...")
+        load_models_on_startup()
+        print("Models loaded and ready\n")
+
+    loading_thread = threading.Thread(target=load_in_background, daemon=True)
+    loading_thread.start()
+
+    # Launch with auto-open in browser (happens immediately)
     app.launch(
         server_name="127.0.0.1",
         server_port=7860,

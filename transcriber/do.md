@@ -1,47 +1,38 @@
-# Capitalization Issues
+You’re getting two bars because gr.Progress renders a bar for each output component tied to the click event — and your click wires two outputs (output_html and status_text). So the same progress stream shows twice.
 
-## Problem
-1. Proper nouns appearing in lowercase: "china", "united states", "mark kerr", "dan boba"
-2. These aren't shown in "Proper Noun Corrections" section
-3. Need 100% guarantee that transcript cells start with capital letter
+Clean fix (keep native Gradio progress, show only one bar)
 
-## Root Cause
-- Whisper outputs lowercase proper nouns
-- Current `fix_capitalization()` only lowercases blacklisted words, doesn't capitalize proper nouns
-- The first-letter fix exists (line 834-835 in `transcribe.py`) but could be more robust
+Capture the status in a hidden gr.State, so the click has only one visible output. Then update status_text in a chained step.
 
-## Solution Options
+Define a state holder next to your outputs:
 
-See **CAPITALIZATION_FIX_PLAN.md** for complete details.
+status_state = gr.State("")
 
-### Quick Summary:
 
-**Phase 1: Immediate Fix** ✅
-```python
-# transcribe.py line 834
-if text:
-    text = text.lstrip()  # Handle leading whitespace
-    if text and text[0].islower():
-        text = text[0].upper() + text[1:]
-```
+Keep your transcribe_wrapper returning (result_html, status_html) exactly as it does now.
 
-**Phase 2: Add Proper Noun Detection** (RECOMMENDED)
-Enhance `fix_capitalization()` in `text_processing.py` with:
-- Country names dict: china → China
-- Name indicators: "mr smith" → "Mr Smith"
-- Compound names: "united states" → "United States"
+Change the click wiring to output the HTML and the hidden state (instead of the visible status HTML):
 
-**Phase 3: LLM Review** (Optional, for ambiguous cases)
-Use Ollama to check context-based capitalization
+job = transcribe_btn.click(
+    fn=transcribe_wrapper,
+    inputs=[
+        input_source,
+        uploaded_file,
+        whisperx_model,
+        ollama_model,
+        language,
+        scope,
+        clip_data,
+        diarization,
+    ],
+    outputs=[output_html, status_state],   # ← only one visible output
+    show_progress=True
+)
 
-## Files to Edit
-1. `transcribe.py` - Line 834 (ensure first capital)
-2. `text_processing.py` - Enhance `fix_capitalization()` function
-3. `transcribe.py` - (Optional) Add LLM review function
 
-## Why They're Not in "Proper Noun Corrections"
-The proper noun correction system looks for:
-- Capitalized phrases in title/description
-- Lowercase versions in transcript
+After it finishes, push the status text into the visible status_text:
 
-If Whisper outputs "china" and the title has "China", it should match. If it's not showing up, the matching algorithm might need adjustment in `proper_nouns.py`.
+job.then(fn=lambda s: s, inputs=[status_state], outputs=[status_text])
+
+
+That way the progress bar is attached only to output_html, so it appears once, and status_text updates at the end. Keep your Option-B setup (progress=gr.Progress(track_tqdm=False) and calling the passed progress_callback inside your pipeline).
