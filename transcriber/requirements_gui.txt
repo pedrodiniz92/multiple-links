@@ -1,5 +1,0 @@
-# Additional requirements for GUI mode
-# Install with: pip install -r requirements_gui.txt
-
-gradio>=4.0.0
-ollama>=0.1.0
